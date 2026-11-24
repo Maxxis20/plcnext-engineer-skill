@@ -1,0 +1,11 @@
+VAR
+    VALUE_HI : WORD { InputPort, EHMI };     (* register 0: float32, high word first *)
+    VALUE_LO : WORD { InputPort, EHMI };     (* register 1 *)
+    VALUE10 : WORD { InputPort, EHMI };      (* register 100: scaled, value x 10, signed *)
+    MB_STATE : UDINT { InputPort, EHMI };    (* 1 while the server is connected and answers *)
+    MB_OFFLINE : UDINT { InputPort, EHMI };  (* times the connection was lost *)
+    MB_EXC : UDINT { InputPort, EHMI };      (* exception answers from the server *)
+    VALUE : REAL { EHMI, OPC };
+    VALUE_S : REAL { EHMI, OPC };
+    fbV : FB_IEEE;
+END_VAR

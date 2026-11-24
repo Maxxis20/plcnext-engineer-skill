@@ -1,0 +1,10 @@
+VAR
+    TS : REAL := 0.1;                     (* cycle time of the task in s *)
+    TEMP : REAL { EHMI, OPC };            (* this controller's value, read by controller B *)
+    REMOTE_VALUE : REAL { EHMI, OPC };    (* written by controller B *)
+    REMOTE_BEAT : INT { EHMI, OPC };      (* written by controller B, counts up once a second *)
+    BEAT_LAST : INT;
+    BEAT_AGE : REAL { EHMI };             (* seconds since REMOTE_BEAT last changed *)
+    LINK_OK : BOOL { EHMI };              (* B wrote within the last 5 s *)
+    PHASE : REAL;
+END_VAR

@@ -1,0 +1,9 @@
+{
+ "name": "OPCUAA",
+ "base": "AXCF2152-2026.0",
+ "pous": [{"name": "MAIN", "kind": "Program"}],
+ "tasks": [{"name": "Cyclic100", "interval_ms": 100, "instances": [{"name": "M", "program": "MAIN"}]}],
+ "target": {"ip": "192.168.1.10"},
+ "hmi_server": {"login": false, "rest": true},
+ "opcua": {"visibility": "marked"}
+}

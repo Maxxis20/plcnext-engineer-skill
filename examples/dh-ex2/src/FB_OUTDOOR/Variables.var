@@ -1,0 +1,17 @@
+VAR_INPUT
+    TE2B_IN       : REAL;        (* outdoor sensor, degC *)
+    TOUT_FALLBACK : REAL;        (* value used while the sensor is faulty *)
+    TOUT_FILT_T   : REAL;        (* filter time constant, s *)
+    TS            : REAL;
+END_VAR
+
+VAR_OUTPUT
+    TE2B       : REAL;           (* raw *)
+    TE2B_F     : REAL;           (* filtered: drives heating curve and summer stop *)
+    TE2B_FAULT : BOOL;
+END_VAR
+
+VAR
+    rSel   : REAL;
+    fbFilt : FB_LAG1;
+END_VAR

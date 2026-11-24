@@ -1,0 +1,41 @@
+VAR_INPUT
+    TE2A_IN      : REAL;         (* heating supply temperature, degC *)
+    TE2B_F       : REAL;         (* filtered outdoor temperature *)
+    P2_FLT_IN    : BOOL;         (* motor protection of P2 tripped *)
+    HEAT_ENABLE  : BOOL;
+    SUM_START    : REAL;
+    SUM_STOP     : REAL;
+    SUM_DLY      : REAL;
+    CRV_N20      : REAL;
+    CRV_0        : REAL;
+    CRV_P20      : REAL;
+    TS_MIN       : REAL;
+    TS_MAX       : REAL;
+    HEAT_PID_P   : REAL;
+    HEAT_PID_I   : REAL;
+    HEAT_HI_LIM  : REAL;
+    HEAT_LO_LIM  : REAL;
+    HEAT_ALM_DLY : REAL;
+    TS           : REAL;
+END_VAR
+
+VAR_OUTPUT
+    TE2A          : REAL;
+    TE2A_FAULT    : BOOL;
+    SUMMER        : BOOL;        (* summer stop active *)
+    HEAT_SP       : REAL;        (* supply set value from the curve *)
+    P2_RUN        : BOOL;
+    P2_FAULT      : BOOL;
+    P2_ST         : INT;         (* 0 stopped, 1 running, 2 fault *)
+    TV2           : REAL;        (* valve command, % *)
+    HEAT_TEMP_ALM : BOOL;
+END_VAR
+
+VAR
+    xReset   : BOOL;
+    xCtrlEn  : BOOL;
+    rCrv     : REAL;
+    fbSumDly : FB_DELAY;
+    fbPI     : FB_PI;
+    fbAlm    : FB_DELAY;
+END_VAR

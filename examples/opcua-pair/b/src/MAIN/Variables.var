@@ -1,0 +1,7 @@
+VAR
+    TS : REAL := 0.1;                     (* cycle time of the task in s *)
+    A_TEMP : REAL { EHMI };               (* read from controller A (Subscribe group) *)
+    TO_A_VALUE : REAL { EHMI };           (* written to controller A (Write group) *)
+    TO_A_BEAT : INT { EHMI };             (* written to controller A, counts up once a second *)
+    BEAT_ACC : REAL;
+END_VAR

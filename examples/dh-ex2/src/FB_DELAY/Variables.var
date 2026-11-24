@@ -1,0 +1,13 @@
+VAR_INPUT
+    X     : BOOL;
+    DELAY : REAL;        (* on-delay, s *)
+    TS    : REAL;        (* cycle time, s *)
+END_VAR
+
+VAR_OUTPUT
+    Q : BOOL;
+END_VAR
+
+VAR
+    rAcc : REAL;
+END_VAR

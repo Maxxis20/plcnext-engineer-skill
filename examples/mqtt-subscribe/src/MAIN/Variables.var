@@ -1,0 +1,18 @@
+VAR
+    TS : REAL := 0.1;                     (* cycle time of the task in s *)
+    MQ : FB_MQTT_SUB;
+    JT : FB_JSON_NUM;
+    JH : FB_JSON_NUM;
+    JF : FB_JSON_NUM;
+    TEMP : REAL { EHMI, OPC };            (* object.temperature of the last uplink *)
+    HUM : REAL { EHMI, OPC };             (* object.humidity *)
+    FCNT : REAL { EHMI };                 (* frame counter of the last uplink *)
+    VALID : BOOL { EHMI };                (* a message with both values has arrived since the start *)
+    AGE : REAL { EHMI };                  (* minutes since the last good message *)
+    MQ_CONNECTED : BOOL { EHMI };
+    MQ_STATE : INT { EHMI };
+    MQ_ERR : WORD { EHMI };
+    MQ_MSGS : UDINT { EHMI };
+    MQ_RECONN : UDINT { EHMI };
+    MQ_LEN : INT { EHMI };
+END_VAR

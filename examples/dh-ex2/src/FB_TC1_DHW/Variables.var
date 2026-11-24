@@ -1,0 +1,28 @@
+VAR_INPUT
+    TE1_IN      : REAL;          (* hot water temperature, degC *)
+    P1_FLT_IN   : BOOL;          (* motor protection of P1 tripped *)
+    DHW_ENABLE  : BOOL;
+    DHW_SP      : REAL;
+    DHW_PID_P   : REAL;
+    DHW_PID_I   : REAL;
+    DHW_HI_LIM  : REAL;
+    DHW_LO_LIM  : REAL;
+    DHW_ALM_DLY : REAL;
+    TS          : REAL;
+END_VAR
+
+VAR_OUTPUT
+    TE1          : REAL;
+    TE1_FAULT    : BOOL;
+    P1_RUN       : BOOL;
+    P1_FAULT     : BOOL;
+    P1_ST        : INT;          (* 0 stopped, 1 running, 2 fault *)
+    TV1          : REAL;         (* valve command, % *)
+    DHW_TEMP_ALM : BOOL;
+END_VAR
+
+VAR
+    xCtrlEn : BOOL;
+    fbPI    : FB_PI;
+    fbAlm   : FB_DELAY;
+END_VAR

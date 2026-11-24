@@ -1,0 +1,64 @@
+VAR_INPUT
+    ENABLE : BOOL;                          (* TRUE: connect and stay connected; FALSE: close *)
+    BROKER_IP : STRING;                     (* e.g. '192.168.1.50' *)
+    BROKER_PORT : UINT := 1883;
+    CLIENT_ID : STRING;                     (* short, at most 23 characters are sent *)
+    TOPIC : STRING[120];                    (* one topic filter, subscribed with QoS 0 *)
+    TS : REAL := 0.1;                       (* cycle time of the calling task in s *)
+END_VAR
+VAR_OUTPUT
+    CONNECTED : BOOL;                       (* CONNACK accepted and SUBACK received *)
+    NEW_MSG : BOOL;                         (* TRUE for one cycle: a complete PUBLISH payload is in PAYLOAD *)
+    PAYLOAD : ARRAY[0..2047] OF BYTE;
+    PAYLOAD_LEN : INT;
+    MSG_CNT : UDINT;
+    RECONNECTS : UDINT;
+    STATE : INT;                            (* 0 closed, 1 opening, 2 wait CONNACK, 3 wait SUBACK, 4 connected, 9 wait after error *)
+    ERR_STATUS : WORD;                      (* socket STATUS of the last error; own: 16#0001 buffer full, 16#0002 timeout, 16#0003 bad or refused packet *)
+END_VAR
+VAR
+    SOCK : TCP_SOCKET;
+    SND : TCP_SEND;
+    RCV : TCP_RECEIVE;
+    SOCK_ACT : BOOL;                        (* ACTIVATE of SOCK *)
+    RX_EN : BOOL;                           (* EN_R of RCV *)
+    TX_REQ : BOOL;                          (* REQ of SND, held until DONE or ERROR *)
+    TX_LAST : BOOL;                         (* REQ as SND saw it in the last call *)
+    TX_WANT : INT;                          (* packet waiting to be sent: 1 CONNECT, 2 SUBSCRIBE, 3 PINGREQ *)
+    TX_LEN : INT;
+    TXBUF : ARRAY[0..199] OF BYTE;
+    RXCHUNK : ARRAY[0..1023] OF BYTE;       (* what one TCP_RECEIVE call delivers *)
+    RXBUF : ARRAY[0..4095] OF BYTE;         (* collected bytes, complete MQTT packets are taken from the front *)
+    RXFILL : INT;
+    ACC : REAL;                             (* seconds in the current state *)
+    PING_ACC : REAL;
+    IDLE_ACC : REAL;                        (* seconds since the last packet from the broker *)
+    FAIL : BOOL;
+    FAIL_ST : WORD;
+    GO_CLOSE : BOOL;
+    CONNACK_OK : BOOL;
+    SUBACK_OK : BOOL;
+    PKT_BAD : BOOL;
+    MORE : BOOL;
+    LEN_DONE : BOOL;
+    PKT : BYTE;
+    B : BYTE;
+    RL : DINT;                              (* remaining length of the packet at the front *)
+    MULT : DINT;
+    P : INT;
+    TOT : INT;
+    TL : INT;
+    PS : INT;
+    PL : INT;
+    N : INT;
+    I : INT;
+    J : INT;
+    K : INT;
+    S_WORK : STRING[120];                   (* string being turned into bytes *)
+    S_LEN : INT;
+    S_MAX : INT;
+    S_POS : INT;
+    S_N : INT;
+    ASCII_TAB : STRING[100];                (* characters 40..126, filled in the code *)
+    CB : BYTE;
+END_VAR

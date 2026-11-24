@@ -1,0 +1,14 @@
+{
+ "name": "MBTCPREAD",
+ "base": "AXCF2152-2026.0-MBTCP",
+ "pous": [{"name": "FB_IEEE", "kind": "FunctionBlock"}, {"name": "MAIN", "kind": "Program"}],
+ "tasks": [{"name": "Cyclic100", "interval_ms": 100, "instances": [{"name": "M", "program": "MAIN"}]}],
+ "target": {"ip": "192.168.1.10"},
+ "hmi": "hmi.py",
+ "hmi_server": {"login": false, "rest": true},
+ "modbus_tcp": {"ip": "192.168.1.50", "unit": 1, "port": 502, "registers": [
+   {"name": "VALUE_HI", "fc": 4, "address": 0}, {"name": "VALUE_LO", "fc": 4, "address": 1},
+   {"name": "VALUE10", "fc": 4, "address": 100}]},
+ "io": {"M.VALUE_HI": "VALUE_HI_input", "M.VALUE_LO": "VALUE_LO_input", "M.VALUE10": "VALUE10_input",
+        "M.MB_STATE": "STATE", "M.MB_OFFLINE": "OFFLINE_CNT", "M.MB_EXC": "EXCEPTION_CNT"}
+}

@@ -1,0 +1,17 @@
+{
+ "name": "OPCUAB",
+ "base": "AXCF2152-2026.0",
+ "pous": [{"name": "MAIN", "kind": "Program"}],
+ "tasks": [{"name": "Cyclic100", "interval_ms": 100, "instances": [{"name": "M", "program": "MAIN"}]}],
+ "target": {"ip": "192.168.1.11"},
+ "hmi_server": {"login": false, "rest": true},
+ "opcua_client": {
+  "connections": [{"name": "PLC_A", "url": "opc.tcp://192.168.1.10:4840", "user": "plc_b",
+                   "password_secret": "PLC_A_OPCUA_PASSWORD"}],
+  "groups": [
+   {"type": "Subscribe", "cycle_ms": 500, "server": "PLC_A", "map": {"M.A_TEMP": "M.TEMP"}},
+   {"type": "Write", "cycle_ms": 500, "server": "PLC_A", "map": {"M.TO_A_VALUE": "M.REMOTE_VALUE",
+                                                                "M.TO_A_BEAT": "M.REMOTE_BEAT"}}],
+  "trust_all": true
+ }
+}

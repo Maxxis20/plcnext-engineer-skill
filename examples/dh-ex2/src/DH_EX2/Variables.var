@@ -1,0 +1,86 @@
+VAR
+    (* --- mode --- *)
+    SIM           : BOOL := TRUE { EHMI, OPC };    (* TRUE: inputs come from the plant model below; FALSE: from the *_IN variables *)
+    TS            : REAL := 0.1 { EHMI, OPC };     (* cycle time of the task, s *)
+
+    (* --- field inputs (used when SIM = FALSE) --- *)
+    TE2B_IN       : REAL { EHMI, OPC };
+    TE1_IN        : REAL { EHMI, OPC };
+    TE2A_IN       : REAL { EHMI, OPC };
+    P1_FLT_IN     : BOOL { EHMI, OPC };
+    P2_FLT_IN     : BOOL { EHMI, OPC };
+
+    (* --- field outputs --- *)
+    TV1_OUT       : REAL { EHMI, OPC };            (* 0...100 % *)
+    TV2_OUT       : REAL { EHMI, OPC };
+    P1_OUT        : BOOL { EHMI, OPC };
+    P2_OUT        : BOOL { EHMI, OPC };
+    ALARM_OUT     : BOOL { EHMI, OPC };
+
+    (* --- set values --- *)
+    TOUT_FALLBACK : REAL := 0.0 { EHMI, OPC };
+    TOUT_FILT_T   : REAL := 900.0 { EHMI, OPC };
+    DHW_ENABLE    : BOOL := TRUE { EHMI, OPC };
+    DHW_SP        : REAL := 58.0 { EHMI, OPC, OutputPort, PROFICLOUD };
+    DHW_PID_P     : REAL := 60.0 { EHMI, OPC };
+    DHW_PID_I     : REAL := 15.0 { EHMI, OPC };
+    DHW_HI_LIM    : REAL := 65.0 { EHMI, OPC };
+    DHW_LO_LIM    : REAL := 50.0 { EHMI, OPC };
+    DHW_ALM_DLY   : REAL := 300.0 { EHMI, OPC };
+    SUM_START     : REAL := 16.0 { EHMI, OPC };
+    SUM_STOP      : REAL := 18.0 { EHMI, OPC };
+    SUM_DLY       : REAL := 3600.0 { EHMI, OPC };
+    HEAT_ENABLE   : BOOL := TRUE { EHMI, OPC };
+    CRV_N20       : REAL := 58.0 { EHMI, OPC };
+    CRV_0         : REAL := 41.0 { EHMI, OPC };
+    CRV_P20       : REAL := 20.0 { EHMI, OPC };
+    TS_MIN        : REAL := 18.0 { EHMI, OPC };
+    TS_MAX        : REAL := 70.0 { EHMI, OPC };
+    HEAT_PID_P    : REAL := 40.0 { EHMI, OPC };
+    HEAT_PID_I    : REAL := 60.0 { EHMI, OPC };
+    HEAT_HI_LIM   : REAL := 80.0 { EHMI, OPC };
+    HEAT_LO_LIM   : REAL := 8.0 { EHMI, OPC };
+    HEAT_ALM_DLY  : REAL := 600.0 { EHMI, OPC };
+
+    (* --- measurements and status --- *)
+    TE2B          : REAL { EHMI, OPC, OutputPort, PROFICLOUD };
+    TE2B_F        : REAL { EHMI, OPC };
+    TE1           : REAL { EHMI, OPC, OutputPort, PROFICLOUD };
+    TE2A          : REAL { EHMI, OPC, OutputPort, PROFICLOUD };
+    HEAT_SP       : REAL { EHMI, OPC, OutputPort, PROFICLOUD };
+    TV1           : REAL { EHMI, OPC, OutputPort, PROFICLOUD };
+    TV2           : REAL { EHMI, OPC, OutputPort, PROFICLOUD };
+    P1_RUN        : BOOL { EHMI, OPC, OutputPort, PROFICLOUD };
+    P2_RUN        : BOOL { EHMI, OPC, OutputPort, PROFICLOUD };
+    P1_ST         : INT { EHMI, OPC };
+    P2_ST         : INT { EHMI, OPC };
+    SUMMER        : BOOL { EHMI, OPC, OutputPort, PROFICLOUD };
+    TE2B_FAULT    : BOOL { EHMI, OPC };
+    TE1_FAULT     : BOOL { EHMI, OPC };
+    TE2A_FAULT    : BOOL { EHMI, OPC };
+    DHW_TEMP_ALM  : BOOL { EHMI, OPC, OutputPort, PROFICLOUD };
+    HEAT_TEMP_ALM : BOOL { EHMI, OPC, OutputPort, PROFICLOUD };
+    P1_FAULT      : BOOL { EHMI, OPC, OutputPort, PROFICLOUD };
+    P2_FAULT      : BOOL { EHMI, OPC, OutputPort, PROFICLOUD };
+    ALARM_SUM     : BOOL { EHMI, OPC, OutputPort, PROFICLOUD };
+
+    (* --- plant model: operator values and states --- *)
+    TOUT          : REAL := -5.0 { EHMI, OPC, OutputPort, PROFICLOUD };
+    DHW_TAP       : REAL := 6.0 { EHMI, OPC };
+    P1_TRIP       : BOOL { EHMI, OPC };
+    P2_TRIP       : BOOL { EHMI, OPC };
+    TV1_POS       : REAL { EHMI, OPC };
+    TV2_POS       : REAL { EHMI, OPC };
+    P1_ON         : BOOL { EHMI, OPC };
+    P2_ON         : BOOL { EHMI, OPC };
+
+    (* --- for displays --- *)
+    TV1_OPEN      : BOOL { EHMI, OPC };      (* valve command above 1 % *)
+    TV2_OPEN      : BOOL { EHMI, OPC };
+
+    (* --- instances, in execution order --- *)
+    fbPlant       : FB_DH_PLANT;
+    fbOutdoor     : FB_OUTDOOR;
+    fbTC1         : FB_TC1_DHW;
+    fbTC2         : FB_TC2_HEAT;
+END_VAR

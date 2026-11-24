@@ -1,0 +1,10 @@
+VAR_INPUT
+    V : REAL;
+END_VAR
+VAR_OUTPUT
+    D : DWORD;
+END_VAR
+VAR
+    A : REAL;
+    E : INT;
+END_VAR

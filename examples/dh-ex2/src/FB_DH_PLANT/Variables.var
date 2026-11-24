@@ -1,0 +1,29 @@
+VAR_INPUT
+    TV1_CMD : REAL;              (* valve commands from the controller, % *)
+    TV2_CMD : REAL;
+    P1_CMD  : BOOL;
+    P2_CMD  : BOOL;
+    TOUT    : REAL;              (* operator: outdoor temperature, degC *)
+    DHW_TAP : REAL;              (* operator: hot water tapping, l/min *)
+    P1_TRIP : BOOL;              (* operator: motor protection of P1 tripped *)
+    P2_TRIP : BOOL;
+    TS      : REAL;
+END_VAR
+
+VAR_OUTPUT
+    TE2B    : REAL;
+    TE1     : REAL;
+    TE2A    : REAL;
+    TV1_POS : REAL;
+    TV2_POS : REAL;
+    P1_ON   : BOOL;
+    P2_ON   : BOOL;
+END_VAR
+
+VAR
+    rTap  : REAL;
+    rTe1s : REAL;
+    rTe2s : REAL;
+    fbTe1 : FB_LAG1;
+    fbTe2 : FB_LAG1;
+END_VAR

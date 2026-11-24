@@ -1,0 +1,21 @@
+VAR_INPUT
+    PV     : REAL;       (* measured value *)
+    SP     : REAL;       (* set value *)
+    ENABLE : BOOL;       (* FALSE: output 0 %, integral cleared *)
+    PBAND  : REAL;       (* proportional band, degC for 100 % *)
+    TI     : REAL;       (* integral time, s; 0 = P only *)
+    DZ     : REAL;       (* dead band, degC *)
+    TS     : REAL;       (* cycle time, s *)
+END_VAR
+
+VAR_OUTPUT
+    Y : REAL;            (* 0...100 % *)
+END_VAR
+
+VAR
+    rErr  : REAL;
+    rKp   : REAL;
+    rP    : REAL;
+    rI    : REAL;
+    rU    : REAL;
+END_VAR

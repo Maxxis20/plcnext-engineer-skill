@@ -1,0 +1,21 @@
+VAR
+    START : BOOL { EHMI };
+    STOP : BOOL { EHMI };
+    RUN : BOOL { EHMI };
+    LAMP : BOOL { EHMI };
+    LATCH : BOOL { EHMI };
+    A : BOOL { EHMI };
+    B : BOOL { EHMI };
+    C : BOOL { EHMI };
+    LEVEL : REAL := 42.0 { EHMI };
+    OFFSET : REAL := 1.5 { EHMI };
+    SETPOINT_NIGHT : REAL := 18.0 { EHMI };
+    SETPOINT_DAY : REAL := 21.0 { EHMI };
+    SETPOINT : REAL { EHMI };
+    TOTAL : REAL { EHMI };
+    HIGH : BOOL { EHMI };
+    ALARM : BOOL { EHMI };
+    TON1 : TON;
+    TON2 : TON;
+    LIM1 : FB_LIMITS;
+END_VAR
