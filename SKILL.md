@@ -399,6 +399,7 @@ Values **into** the program from a broker: section "MQTT in".
 | `scripts/pxe.sh` | the driver, one verb per step |
 | `scripts/pxproj.py` | project generator; `--strip` makes a base project from one the tool saved |
 | `scripts/plc-ssh.sh` | a shell on the controller, password as in "Passwords"; `--out` / `--in` for backup and restore, `PLC_SECRET` / `PLC_HOST` for another controller |
+| `scripts/plc-backup.sh` | `backup [name]` / `restore <archive>` / `check <archive>`: the controller's project and settings into a local archive with checksum, and the project back (findings, "Backup and restore") |
 | `scripts/pxld.py` | ladder / function block diagram worksheets with layout and wires |
 | `scripts/pxhmi.py` | operator page elements |
 | `scripts/config.sh` | the settings (transport, controller address, password variable), read from the environment or `~/.plcnext-engineer/config` |

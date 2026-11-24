@@ -53,6 +53,8 @@ gx() { # gx <timeout> <command...>   (stdin is passed to the command)
     grep -q "guest agent is not running" "$err" || break
     [ $try = 6 ] || sleep 10
   done
+  if [ -z "$out" ] && [ -s "$err" ] && ! grep -q "guest agent is not running" "$err"; then
+    echo "vm.sh: guest exec failed: $(head -1 "$err")" >&2; rm -f "$err"; return 1; fi
   grep -v "guest agent is not running" "$err" >&2 || true; rm -f "$err"
   printf '%s' "$out" | python3 -c '
 import sys, json
@@ -68,9 +70,9 @@ sys.exit(d.get("exitcode", 1))'
 enc() { printf '%s' "$1" | iconv -f utf-8 -t utf-16le | base64 | tr -d '\n'; }
 pse() { echo "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $(enc "$1")"; }
 
-put() { # put <local> <win path>: base64 over stdin in 3 MB pieces
+put() { # put <local> <win path>: base64 over stdin in 700 kB pieces
   local src=$1 dst=$2 first=1 part
-  local tmp; tmp=$(mktemp -d); split -b 3000000 "$src" "$tmp/p."
+  local tmp; tmp=$(mktemp -d); split -b 700000 "$src" "$tmp/p."   # the guest agent takes 1 MiB of input per call: 700 kB is 933 kB as base64
   for part in "$tmp"/p.*; do
     local mode; [ $first = 1 ] && mode=Create || mode=Append; first=0
     base64 < "$part" | tr -d '\n' | gx 120 "$(pse "\$d=[Convert]::FromBase64String([Console]::In.ReadToEnd()); New-Item -ItemType Directory -Force (Split-Path '$dst') | Out-Null; \$f=[IO.File]::Open('$dst','$mode'); \$f.Write(\$d,0,\$d.Length); \$f.Close()")"

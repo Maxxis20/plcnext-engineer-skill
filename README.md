@@ -21,6 +21,7 @@ What it does:
 - **OPC UA between two controllers**: one serves, the other's firmware client reads and writes.
 - **MQTT out** with the firmware's own client (and a FUXA view of the values), and **MQTT in** with a small
   MQTT client in Structured Text (ChirpStack uplinks, for example).
+- **Backup and restore** of a controller's project, checked by checksum against the controller.
 - **No controller needed** to start: the free AXC F 1152 simulation of PLCnext Engineer works too.
 
 What is in the skill:
@@ -35,12 +36,23 @@ What is in the skill:
   operator page generators.
 - `scripts/vm.sh`, `scripts/config.sh`, `scripts/win/`: how the scripts reach the machine that runs Engineer, and
   their settings.
+- `scripts/plc-backup.sh`: backup, check and restore of a controller's project.
 - `scripts/plc-ssh.sh`, `scripts/plc-mqtt.sh`, `scripts/plc-opcua-client.sh`, `scripts/pxe-login.sh`,
   `scripts/pxfuxa.py`: a shell on the controller, its MQTT client, OPC UA client connections, Engineer's login
   dialog, a FUXA view.
 - `examples/`: worked examples (below).
 
 ![District heating example: the operator page served by the controller](examples/dh-ex2/hmi-normal.png)
+
+Modbus RTU through the serial module: the room sensor example's page, shaped like the sensor (dark and light look),
+and the probe that finds address, register base and word order of an unknown device.
+
+<p>
+<img src="examples/modbus-rtu-room-sensor/page.png" alt="Modbus RTU room sensor: operator page, dark look" width="49%">
+<img src="examples/modbus-rtu-room-sensor/page-light.png" alt="Modbus RTU room sensor: operator page, light look" width="49%">
+</p>
+
+![Modbus RTU probe: device address, function and start address chosen on the page, raw and decoded values](examples/rs-uni-modbus/page.png)
 
 ## What you need
 

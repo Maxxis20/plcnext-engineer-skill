@@ -150,6 +150,9 @@ Worked out on firmware 2025.6.0; the same was seen on 2026.0.2 unless a line say
 - Firmware 2026.0: the address is in `/etc/systemd/network/79-if-1.network` (`Address=`), writable by admin;
   takes effect at the next boot (`sudo /sbin/reboot`). A live change with `sudo ifconfig` did not work from a
   script. `79-if-2.network` is the interface of an AXC F XT ETH 1TX module (`enp1s0`) (**seen**).
+- `scripts/plc-backup.sh` does all of the following in one command each (**proven** 2026-11-24 on firmware 2026.0.2: backup
+  3 MB, 48 project files, checksum equal to the controller's; restore of that archive onto the same controller,
+  runtime back with the program running).
 - Backup and restore of a controller's project (**proven** 2026-11-23: project of one AXC F 2152 backed up, put
   on a second one with the same firmware, checksum of the folder equal, runtime loads it, `projectCRC` equal,
   state Running, operator page served):
