@@ -50,7 +50,8 @@ the content is identical apart from the items the tool adds by itself (a `Login`
 
 **Untested**: NOLD and SFC worksheets, data type worksheets, global variables other than ports, the controller as
 Modbus TCP server, alarms. Now known (sections below): I/O modules and their process data, ports, the remote
-server of the Modbus TCP client, OPC UA visibility and client connections.
+server of the Modbus TCP client, OPC UA visibility and client connections, a Profinet device on the controller
+side.
 
 ## HMI pages
 
@@ -296,6 +297,37 @@ How to use it: `opcua.md`. The file and controller side:
   flow with PKCE at `/_auth_api/authorize`, `/_auth_api/login`, `/_auth_api/token`, then with the Bearer token
   `POST /arp_internal_rsc/jrpc/Arp/Arp/System/Um/Services/Internal/IUserManagementService/AddUser`
   `{"username","password"}` and `SetUserRoles` `{"username","roles":["DataChanger"]}`.
+
+## Profinet (proven 2026-11-24: two AXC F 2152, firmware 2026.0.2, one controller and one device)
+
+How to use it: `profinet.md`. The file and controller side:
+
+- **Device side**: nothing in the project's hardware. The firmware's Profinet device function is on by default;
+  the program declares the system variables `PND_S1_INPUTS`, `PND_S1_OUTPUTS` (`PND_IO_512`, 512 bytes) and
+  `PND_S1_VALID_DATA_CYCLE` (BOOL) in a `VAR_EXTERNAL` block of its `Variables.var` (**proven**). Also in the
+  data list: `PND_S1_PLC_RUN`, `PND_S1_OUTPUT_STATUS_GOOD`, `PND_S1_INPUT_STATUS_GOOD`, `PND_S1_DATA_LENGTH`,
+  `PND_IO_DRIVEN_BY_PLC` (**seen**, untested).
+- **Controller side**: a folder `Hardware/CFG_*/PN_Master/` with `Arp.Io.PnC.acf.config` and `.station` files;
+  per device `AXC_F_2152/<id>.ds` (and `<id>_PN_Device.station`), `DAP/` (Interface, Port_1, Port_2) and
+  `IO_512/IO_512/<id>.ds` for the module (**seen**). The device's IP address and name of station are `InstVal`
+  lines in its `.ds`. Not generated: made once in the tool and kept in the base project.
+- The module "IO 512" has two data items, `DI4096` (from the device) and `DQ4096` (to the device), Octetstring[512].
+  A program port of type `PND_IO_512` connects to each like any port (`io`) (**proven**).
+- Default update time 8 ms gives warning `PNIO0112` ("cannot be updated cyclically faster than a value of 16
+  ms"): the interface's "Reduction ratio" 16 or more; 32 used (**proven**).
+- **Name of station**: `target.station` writes `IP:DnsName` and `IP:ExtendedDomainName` (`[UTF-8;<hex>]`) of
+  `L34_1` in the controller's `.ds`; the PLANT node is then labelled `<station> : AXC F 2152` (**proven**). It
+  does **not** name the controller on the network: written that way, both controllers answered a scan as
+  `axcf2152-lan1` (the firmware default), the controller's BF-C lamp was red and nothing was exchanged
+  (**proven**). Assigned from Engineer (PLANT > Profinet > Online Devices, scan, "Name of station (Online)",
+  pick by MAC address) it took at once and the exchange started within seconds (**proven**). Kept across a
+  restart of the device: untested.
+- **Address**: the controller sets the device's IP address from its project by DCP when the connection starts
+  (**seen**, with the address the device already had). A different one: untested.
+- Profinet RT and Modbus TCP, OPC UA and the operator page share the same Ethernet interface (**seen**).
+- `pxe.sh` finds the controller's own PLANT node by itself (its label follows the station name);
+  `PXE_CONTROLLER` is only needed to pick one of several. `pxproj.py --strip` also drops the ports of the
+  programs of a project it built (data list roles and `VAR_CONFIG`), so a built project can be stripped to a base.
 
 ## Structured Text (proven 2026-11-23 on a controller: the MQTT subscriber blocks)
 

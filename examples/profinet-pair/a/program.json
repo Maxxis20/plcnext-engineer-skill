@@ -1,0 +1,9 @@
+{
+ "name": "PNA",
+ "base": "AXCF2152-2026.0-PNB",
+ "pous": [{"name": "MAIN", "kind": "Program"}],
+ "tasks": [{"name": "Cyclic100", "interval_ms": 100, "instances": [{"name": "M", "program": "MAIN"}]}],
+ "target": {"ip": "192.168.1.10"},
+ "hmi_server": {"login": false, "rest": true},
+ "io": {"M.PN_IN": "DI4096", "M.PN_OUT": "DQ4096"}
+}

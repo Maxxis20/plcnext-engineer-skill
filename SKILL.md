@@ -119,7 +119,9 @@ $P shot out.png               # screenshot of the whole desktop. Read the PNG.
 - `tasks`: cyclic tasks and the program instances they run. The instance name is what the HMI refers to.
 - `target`: where the Cockpit connects. `{"simulation": true}` runs without a controller on Engineer's own
   simulation (free for the AXC F 1152, base `AXCF1152-2026.0`): slower to start and with its own names and
-  address, see `reference/findings.md`, "Simulation", before using it.
+  address, see `reference/findings.md`, "Simulation", before using it. `"station": "plc-b"` beside `ip` sets the
+  project's Profinet "Name of station" of the controller (lower case, digits, `-`); it labels the PLANT node but
+  does not name the device on the network (section "Profinet between controllers").
 - `hmi_server.login: false` switches the operator page's login off. Bench use only; say so to the user.
 - `modbus_tcp` (optional): the remote Modbus TCP server and the registers to read, `{"ip": "192.168.1.50",
   "unit": 1, "port": 502, "registers": [{"name": "VALUE_HI", "fc": 4, "address": 0}]}`. Needs a base project
@@ -167,6 +169,9 @@ END_VAR
   escape characters"). No direct character-to-byte conversion was found: look the character up with `FIND` in a
   table string (`reference/mqtt-subscribe.md`, "Characters"). No bit cast between DWORD and REAL either
   (`FB_IEEE`).
+- System variables of the firmware are declared `VAR_EXTERNAL` in the program and used like any variable
+  (**proven** with the Profinet device's `PND_S1_INPUTS : PND_IO_512;`, a 512 byte array indexed `[0]..[511]`,
+  and `PND_S1_VALID_DATA_CYCLE : BOOL;`, `reference/profinet.md`).
 - Not tried in ST: `TIME` and the standard timers (`TON`; proven in a diagram), structs. If you need them, write
   a small test POU first and read the errors. Timers can be avoided by counting seconds with the cycle time
   (`acc := acc + TS;`).
@@ -231,6 +236,25 @@ variables to and from another server. Nothing to program: no client function blo
 - Check in B's `Arp.log`: `ConnectFinished - Connected to server endpoint`. The program sees no link state: when
   the trial ends the mapped variables simply keep their last values on both sides. Send a counting value across
   and watch it move. Example: `examples/opcua-pair`.
+
+### Profinet between controllers
+
+A controller (A) exchanges up to 512 bytes each way with another PLCnext controller (B) that acts as a Profinet
+device, in real time beside the other Ethernet traffic. Read `reference/profinet.md` first. In short:
+
+- Device (B): no hardware entry. The program declares the system variables `PND_S1_OUTPUTS`, `PND_S1_INPUTS`
+  (`PND_IO_512`) and `PND_S1_VALID_DATA_CYCLE` (BOOL) as `VAR_EXTERNAL` and reads / writes the bytes.
+  `"target": {"ip": ..., "station": "plc-b"}`.
+- Controller (A): B as a device in PLANT > Profinet (type "AXC F 2152 Rev. >= 2/V21.0.0", module "IO 512", IP
+  address, name of station, reduction ratio 16 or more against warning PNIO0112), made once by hand and kept as
+  a base project. Ports `PN_IN : PND_IO_512 { InputPort }`, `PN_OUT : PND_IO_512 { OutputPort }`, `"io":
+  {"M.PN_IN": "DI4096", "M.PN_OUT": "DQ4096"}`.
+- **B's name on the network is set by hand**, once per device: A's project connected, PLANT > Profinet > Online
+  Devices, scan, pick B by its MAC address in "Name of station (Online)". `target.station` does not do it. Until
+  then A's BF-C lamp is red and nothing moves. Not scripted: ask the user to do it.
+- A sets B's IP address from its project at the start: give A's project B's own address.
+- Bytes arrive in the order sent; pack wider values yourself (high byte first in the example). Check with
+  `PND_S1_VALID_DATA_CYCLE` on B and a counter that B sends back to A. Example: `examples/profinet-pair`.
 
 ### MQTT in
 
@@ -413,5 +437,6 @@ Values **into** the program from a broker: section "MQTT in".
 | `reference/modbus-rtu.md` | Modbus RTU through a serial module: steps, probe, frames, pitfalls |
 | `reference/modbus-tcp.md` | Modbus TCP with the firmware's own client: base project, registers, status items |
 | `reference/opcua.md` | OPC UA server and the firmware's client between two controllers: users, passwords, certificates, log |
+| `reference/profinet.md` | Profinet between two controllers: device by system variables, controller base by hand, naming, byte layout |
 | `reference/mqtt-subscribe.md` | MQTT subscriber in Structured Text: the two blocks, states, characters, ChirpStack |
 | `reference/findings.md` | file format, tool behaviour, controller facts: proven / seen / untested |

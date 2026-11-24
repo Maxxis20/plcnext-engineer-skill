@@ -24,12 +24,14 @@
 #   pxe.sh click <x> <y> ...     mouse clicks at SCREEN coordinates
 set -euo pipefail
 S=$(cd "$(dirname "$0")" && pwd); . "$S/config.sh"; V="$S/vm.sh"; PLC=$PLC_HOST
-CTRL=${PXE_CONTROLLER:-AID_Project_axc-f-2152-1 : AXC F 2152}
+CTRL=${PXE_CONTROLLER:-}      # the controller's node in PLANT; found by itself when not set (its label follows the station name)
 uia() { "$V" uia "$@"; }
 front() { "$V" gui 'minimize brave' 'minimize msedge' 'minimize chrome' 'activate PLCnext Engineer' >/dev/null; }   # nothing on top of Engineer; the browser window keeps its page
 title() { uia wins | sed -n "s/.*name='PLCnext Engineer - \(.*\)'.*/\1/p" | head -1; }
 cockpit() {   # the Cockpit editor of the controller; its tab is a toggle, so click it only when the editor is not showing
   uia 'state AID_Connect / Disconnect' | grep -q "^Button" && return 0
+  [ -n "$CTRL" ] || CTRL=$(uia 'expand ^AID_Project$' 'find ^AID_Project_[^_]+ : ' | sed -n "s/^TreeItem.* id='\([^']*\)'.*/\1/p" | head -1)
+  [ -n "$CTRL" ] || { echo "no controller in the PLANT tree (is a project open?)" >&2; return 1; }
   uia 'expand ^AID_Project$' "dclick $CTRL" >/dev/null; sleep 3
   uia 'state AID_Connect / Disconnect' | grep -q "^Button" || { uia 'click AID_Description_Cockpit' >/dev/null; sleep 2; }
 }
@@ -82,7 +84,7 @@ case "${1:-}" in
            for i in 1 2 3 4 5 6 7 8; do uia 'state AID_Connect / Disconnect' | grep -q "toggle=On" && return 0; sleep 3; done; return 1
          }
          connect || { echo "write: cannot connect"; uia 'texts CellElement_[0-9]+_5' | tail -2; exit 1; }
-         want=$(title); want=$(basename "${want//\\//}" .plcnx2); want=${want%\*}
+         want=$(title); want=${want%\*}; want=$(basename "${want//\\//}" .plcnx2)   # "*" = changed, after the extension
          uia 'click AID_Write and start combined_ActionButton' >/dev/null
          # the controller restarts its runtime on a download; Engineer often loses the connection then: reconnect and look
          for i in 1 2 3 4 5 6 7 8; do sleep 8; connect || continue

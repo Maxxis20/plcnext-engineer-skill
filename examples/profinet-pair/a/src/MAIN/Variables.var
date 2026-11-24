@@ -1,0 +1,18 @@
+VAR
+    PN_IN : PND_IO_512 { InputPort };     (* Profinet: from device plc-b (DI4096 of its module IO 512) *)
+    PN_OUT : PND_IO_512 { OutputPort };   (* Profinet: to device plc-b (DQ4096) *)
+    B_TEMP : REAL { EHMI };               (* B's Modbus TCP values, over Profinet *)
+    B_HUM : REAL { EHMI };
+    B_BAT : INT { EHMI };
+    B_MB_OK : BOOL { EHMI };              (* B's Modbus TCP server answers *)
+    B_BEAT : INT { EHMI };                (* B's counter *)
+    B_ALIVE : BOOL { EHMI };              (* B's counter moved within the last 3 s *)
+    B_ECHO : INT { EHMI };                (* our counter as B sends it back *)
+    A_CNT : INT { EHMI };                 (* our counter to B, one a second *)
+    SP : REAL := 21.5 { EHMI };           (* a set value to B *)
+    TS : REAL := 0.1;                     (* cycle time of the task in s *)
+    ACC : REAL;
+    SEEN : REAL;
+    LAST : INT;
+    W : WORD;
+END_VAR

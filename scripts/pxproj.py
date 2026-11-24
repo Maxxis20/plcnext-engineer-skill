@@ -407,6 +407,18 @@ class Project:
             t = re.sub(r"(Layer3-4\[@uID='L34_1'\]/InstanceObjList/Obj\[@uID='ip100' type='IP:IpAddress'\]\" Type=\"Ade\.Fdcml\.Core\.Ipv4\">)[0-9.]*",
                        r"\g<1>%s" % ip, t)
             self.files[ds] = (BOM if self.files[ds].startswith(BOM) else b"") + t.encode("utf-8")
+        if target.get("station"):                        # Profinet name of station (the controller's own; lower case, digits, -)
+            st = target["station"]
+            if not re.fullmatch(r"[a-z0-9][a-z0-9.-]{0,239}", st):
+                raise ValueError("target.station: lower-case letters, digits, '-' and '.' only: %r" % st)
+            ds = next(p for p in self.files if p.endswith(".ds") and b"HMI:AccessRights" in self.files[p])
+            t = self.files[ds].decode("utf-8-sig")
+            t, c1 = re.subn(r"(Layer3-4\[@uID='L34_1'\]/InstanceObjList/Obj\[@uID='ip101' type='IP:DnsName'\]\" Type=\"Ade\.Fdcml\.Core\.StringAscii\">)[^<]*", r"\g<1>" + st, t)
+            t, c2 = re.subn(r"(Layer3-4\[@uID='L34_1'\]/InstanceObjList/Obj\[@uID='ip102' type='IP:ExtendedDomainName'\]\" Type=\"Ade\.Fdcml\.Core\.String\">)[^<]*",
+                            r"\g<1>[UTF-8;%s]" % st.encode().hex().upper(), t)
+            if c1 != 1 or c2 != 1:
+                raise ValueError("target.station: the name settings were not found in the base project")
+            self.files[ds] = (BOM if self.files[ds].startswith(BOM) else b"") + t.encode("utf-8")
 
     def save(self, path):
         self.files["PROJECT.proj"] = crlf(json.dumps(self.index, indent=2)).encode()
@@ -446,6 +458,16 @@ def strip(src, dst):
     for f in [f for f in p.files if f.endswith("Navigation.hminav")]:
         p.files[f] = b'<?xml version="1.0" encoding="utf-8"?><NavigationDocument />'
     p.set_tasks([])
+    # a project built by pxproj.py and saved by the tool carries the ports of its programs: drop them too
+    for f in [f for f in p.files if f.endswith("GlobalVariables.var")]:
+        t = p.files[f].decode("utf-8-sig").replace("\r\n", "\n")
+        t = re.sub(r"\nVAR_CONFIG\n.*?\nEND_VAR\n", "\n", t, flags=re.S)
+        p.files[f] = BOM + crlf(t).encode()
+    for f in [f for f in p.files if f.endswith("DataList.dl")]:
+        t = p.files[f].decode("utf-8-sig").replace("\r\n", "\n")
+        t = re.sub(r"      <Role TypeName=\"(?:In|Out)Port\"(?:(?!</Role>).)*?<ProgramInstance>.*?</Role>\n", "", t, flags=re.S)
+        t = re.sub(r"    <Datum Uuid=\"[^\"]+\">\n      <FunctionText />\n    </Datum>\n", "", t)
+        p.files[f] = BOM + crlf(t).encode()
     p.save(dst)
     return len(p.files)
 

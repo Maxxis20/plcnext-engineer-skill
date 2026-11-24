@@ -19,6 +19,8 @@ What it does:
   device, and a complete room sensor with reads and writes.
 - **Modbus TCP** with the firmware's own client: registers, floats, connection state.
 - **OPC UA between two controllers**: one serves, the other's firmware client reads and writes.
+- **Profinet between two controllers**: one is the Profinet controller, the other a Profinet device; up to 512
+  bytes each way, in real time.
 - **MQTT out** with the firmware's own client (and a FUXA view of the values), and **MQTT in** with a small
   MQTT client in Structured Text (ChirpStack uplinks, for example).
 - **Backup and restore** of a controller's project, checked by checksum against the controller.
@@ -29,7 +31,7 @@ What is in the skill:
 - `SKILL.md`: what the agent reads first.
 - `reference/findings.md`: the project file format, how the tool behaves when driven from outside, facts about
   the controller; each marked proven, seen or untested. Beside it `modbus-rtu.md`, `modbus-tcp.md`, `opcua.md`,
-  `mqtt-subscribe.md`.
+  `profinet.md`, `mqtt-subscribe.md`.
 - `scripts/pxe.sh`: the driver. Build, open, read errors, write to the controller, state, values, operator page,
   screenshots.
 - `scripts/pxproj.py`, `scripts/pxld.py`, `scripts/pxhmi.py`: project, ladder / function block diagram and
@@ -130,6 +132,7 @@ $P hmi page.png                            # the operator page in a browser, scr
 | `examples/modbus-rtu-room-sensor` | a Modbus RTU room sensor with reads, writes and a page shaped like the sensor, light and dark | ran on an AXC F 2152 |
 | `examples/modbus-tcp-read` | a float and a scaled value from a Modbus TCP server, connection lamp and counters | built; the same pattern ran |
 | `examples/opcua-pair` | two controllers: A serves, B's firmware client reads and writes, a counter shows the link | built; the same pattern ran |
+| `examples/profinet-pair` | two controllers over Profinet: B (device) passes Modbus TCP values to A, A's counter comes back as an echo | device side built; the same pattern ran |
 | `examples/mqtt-subscribe` | values from an MQTT broker into the program (ChirpStack uplinks) | built; the blocks ran 8 hours |
 
 ## Limits
@@ -140,5 +143,7 @@ $P hmi page.png                            # the operator page in a browser, scr
 - Operator page: texts, values, lamps, bars, buttons, pump and valve symbols. No trends, no alarm table.
 - Modbus TCP: reading registers only, one server per base project.
 - OPC UA client: without the vendor's client licence it runs 4 hours from the start of the controller's runtime.
+- Profinet: the device entry on the controller side is made once by hand (base project), and the device's name
+  on the network is assigned once by hand in Engineer. One device tried.
 - MQTT: the firmware client publishes only; the Structured Text client takes plain TCP, no login, one topic, QoS 0.
 - Nothing here is Phoenix Contact's software or data. PLCnext is their trademark.

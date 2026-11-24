@@ -1,0 +1,21 @@
+VAR
+    T10 : WORD { InputPort, EHMI };       (* Modbus TCP register 0: temperature x 10 *)
+    H10 : WORD { InputPort, EHMI };       (* register 1: humidity x 10 *)
+    BAT : WORD { InputPort, EHMI };       (* register 2: battery mV *)
+    MB_STATE : UDINT { InputPort, EHMI }; (* 1 = server answers *)
+    MB_OFFLINE : UDINT { InputPort, EHMI };
+    TEMP : REAL { EHMI };
+    HUM : REAL { EHMI };
+    PN_VALID : BOOL { EHMI };             (* Profinet: the controller exchanges data with us *)
+    BEAT : INT { EHMI };                  (* our counter to the controller, one a second *)
+    FROM_A_CNT : INT { EHMI };            (* the controller's counter, as received *)
+    FROM_A_SP : REAL { EHMI };            (* the controller's set value, as received *)
+    TS : REAL := 0.1;                     (* cycle time of the task in s *)
+    ACC : REAL;
+    W : WORD;
+END_VAR
+VAR_EXTERNAL
+    PND_S1_OUTPUTS : PND_IO_512;          (* Profinet device: to the controller *)
+    PND_S1_INPUTS : PND_IO_512;           (* Profinet device: from the controller *)
+    PND_S1_VALID_DATA_CYCLE : BOOL;
+END_VAR
