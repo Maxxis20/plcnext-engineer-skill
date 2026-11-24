@@ -1,0 +1,32 @@
+VAR
+    PN_OK : BOOL { EHMI };                (* Profinet: the controller exchanges data with us *)
+    RUN_CMD : BOOL { EHMI };              (* from the controller: run *)
+    DRIVE_RESET : BOOL { EHMI };          (* from the controller: reset a drive fault *)
+    SPEED_SP : INT { EHMI };              (* from the controller: setpoint 0..1000 per mille *)
+    SPEED_ACT : INT { EHMI };             (* actual speed 0..1000 per mille *)
+    READY : BOOL { EHMI };
+    RUNNING : BOOL { EHMI };              (* feedback: at speed *)
+    FAULT : BOOL { EHMI };                (* latched until DRIVE_RESET (or LOCAL_RESET) *)
+    SIS_OK : BOOL { EHMI };               (* safety chain closed *)
+    LOCAL : BOOL { EHMI };                (* the local switch has control *)
+    SIM_TRIP : BOOL { EHMI };             (* test: drive trips *)
+    SIM_ESTOP : BOOL { EHMI };            (* test: safety chain open *)
+    SIM_NO_FB : BOOL { EHMI };            (* test: no running feedback *)
+    SIM_LOCAL : BOOL { EHMI };            (* test: local switch to local *)
+    LOCAL_RUN : BOOL { EHMI };            (* local panel: run *)
+    LOCAL_SP : INT := 500 { EHMI };       (* local panel: setpoint per mille *)
+    LOCAL_RESET : BOOL { EHMI };          (* local panel: reset *)
+    RAMP : REAL := 200.0 { EHMI };        (* per mille per second: 20 %/s *)
+    TS : REAL := 0.1;
+    RUN_REQ : BOOL;
+    SP : INT;
+    TARGET : REAL;
+    SPF : REAL;
+    B : BYTE;
+    W : WORD;
+END_VAR
+VAR_EXTERNAL
+    PND_S1_OUTPUTS : PND_IO_512;
+    PND_S1_INPUTS : PND_IO_512;
+    PND_S1_VALID_DATA_CYCLE : BOOL;
+END_VAR

@@ -1,0 +1,13 @@
+VAR
+    CH : FB_CH;
+    TG : ARRAY[1..16] OF STRING[24];
+    VL : ARRAY[1..16] OF REAL;
+    CH_ON : BOOL := TRUE { EHMI };
+    RAMP : REAL { EHMI };                 (* the value stored, counts up 1 a second *)
+    CH_STATE : INT { EHMI };
+    CH_ROWS : UDINT { EHMI };
+    CH_ERR : UDINT { EHMI };
+    CH_CODE : INT { EHMI };
+    Q1 : REAL { EHMI };
+    QN : INT { EHMI };
+END_VAR

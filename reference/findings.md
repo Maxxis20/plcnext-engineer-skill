@@ -24,6 +24,16 @@ the content is identical apart from the items the tool adds by itself (a `Login`
   {Id('<guid>')};` under a first line `{ CustomGroupDefinition('<guid>', '') }`. Without the `Id` a flag shows as
   ticked in the variable table but the HMI build says `The field or variable 'X' does not exist in '<program>'`.
   `pxproj.py` writes this form; sources carry only `{ EHMI, OPC }`.
+- `pxproj.py` reads **one declaration per line**. With several on one line (`A : INT; B : INT;`) only the first
+  gets its `Id` and flags; the rest of the line is passed on as it stands, without an `Id`, so its flags do not
+  work (**seen**). One per line, always.
+- `%%ENV:NAME%%` in a source is replaced by `pxproj.py` with the value of the environment variable `NAME` at build
+  time; the build stops when it is not set, or when the value holds `'`, `$`, `\` or a line break (`env_tokens`).
+  For a password the program itself needs (**proven** with the ClickHouse client of `examples/pump-sequence`).
+  The value then stands in clear in the built `.plcnx2`.
+- **Program instance names**: `D` is refused at `open` with "Invalid program instance name" (**proven**); `DRV`
+  works, and so does `M` in every example. Probably because `D` is a type prefix of IEC literals (guess); avoid
+  other one-letter names (`T`) as well.
 - Tasks and program instances are stored twice and must agree: `Hardware/CFG_*/PLCnext/EsmConfiguration.esmc`
   (XML) and `Hardware/CFG_*/RES_*/ResourceSettings.set` (IEC text, `TASK ...; PROGRAM <inst> WITH <task> : <type>;`).
   A stale entry in the second gives `SEM1033 Invalid program instance type`.
@@ -48,7 +58,7 @@ the content is identical apart from the items the tool adds by itself (a `Login`
   networks, not looked at). By hand in the editor: click the canvas and type a name; double click a pin and type.
 - Components > Programming > Local > right click: "Import IEC 61131-10..." exists (not tried).
 
-**Untested**: NOLD and SFC worksheets, data type worksheets, global variables other than ports, the controller as
+**Untested**: NOLD worksheets (SFC needs a licence of its own: `sequence-st.md`), data type worksheets, global variables other than ports, the controller as
 Modbus TCP server, alarms. Now known (sections below): I/O modules and their process data, ports, the remote
 server of the Modbus TCP client, OPC UA visibility and client connections, a Profinet device on the controller
 side.
@@ -73,6 +83,12 @@ side.
 - With user management on, the tool adds a `Login` page by itself and the browser asks for the controller's
   user. With `hmi_server.login: false` the page opens directly (**proven**).
 - Page address: `https://<controller>/ehmi/hmiapp.html` (**proven**). Self-signed certificate.
+- `IncrementValueAction` with a step of 0.5 on a REAL is refused: "Invalid step value" (**proven**; 0.1 gives a
+  warning and a button that does nothing). Keep such a value as an INT x 10 and step it by 5.
+- The page's REST interface (`hmi_server.rest`, login off) reads **and writes** program variables flagged
+  `{ EHMI }` without a session: `pxe.sh set M.SQ_CMD=1` is a `PUT /_pxc_api/api/variables` (**proven**: the 41
+  checks of `examples/pump-sequence/test_seq.sh` drive both controllers this way). So with login off, anyone who
+  reaches the controller can read and change every page variable: never put a secret in one.
 
 ## The tool, driven
 
@@ -218,6 +234,9 @@ Worked out on firmware 2025.6.0; the same was seen on 2026.0.2 unless a line say
   0, `Control Word Low Byte` = byte 1, `TxCHAR01` = byte 2 (length), `TxCHAR02`.. the characters; the same with
   `Status Word ...` and `RxCHAR..`. In Modbus/RTU mode the module adds and checks the CRC.
 - No bit cast from DWORD to REAL was found; `FB_IEEE` in the example computes it.
+- The Modbus RTU room sensor stopped answering once while the network was being changed and came back by itself,
+  with nothing done to it (**seen** once, 2026-11-24; cause unclear). The program needs no restart for it: the
+  next poll that gets an answer sets `COMM_OK` again.
 
 ## Modbus TCP client (proven 2026-11-23: AXC F 2152, firmware 2026.0.2, one remote server, read)
 
@@ -339,7 +358,12 @@ How to use it: `profinet.md`. The file and controller side:
   escape characters".
 - No direct character-to-byte conversion was found. The blocks look the character up with `FIND` in a table
   string of the characters 40..126 (no quote, no dollar, backslash replaced); position + 39 is the code.
-- A variable named like a function (`NEG`) gives a warning.
+- A variable named like a function or POU gives a warning, "named like a POU" (**proven**: `NEG`, `RS`). A variable
+  named `LEN` clashes with the function `LEN` (**proven**): rename it.
+- A string literal cannot hold everything JSON or HTTP needs (no `$`, no backslash, no line break).
+  `FB_TXT` of `examples/clickhouse-log` writes text into a byte buffer with stand-ins: `` ` `` for `"`, `@` for `'`,
+  `^` for CR LF, `|` for LF; characters missing from its table (below 40, the quotes) become spaces (**proven**:
+  HTTP requests and JSON rows accepted by a ClickHouse server, `clickhouse.md`).
 - Socket blocks `TCP_SOCKET`, `TCP_SEND`, `TCP_RECEIVE` of the "PLCnext Controller" library, referenced by every
   project: a plain TCP client works with them (`mqtt-subscribe.md`). `TLS_SOCKET_2` and relatives exist
   (**untested**).

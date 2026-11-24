@@ -13,6 +13,7 @@
 #   pxe.sh coldstart             start a program that is loaded but stopped (seen after the first write to the simulation)
 #   pxe.sh state                 connection, project on the controller, LEDs text, memory and CPU load
 #   pxe.sh read <inst.VAR> ...   current values from the controller (REST), e.g. read M.TE1 M.TV1; no screen needed
+#   pxe.sh set <inst.VAR>=<v> ... write values over REST (variables with { EHMI }), e.g. set M.SQ_CMD=1
 #   pxe.sh wait <inst.VAR> <low> <high> [s]   block until the value is inside low..high (default 120 s at most)
 #   pxe.sh hmi [png]             the controller's operator page in a browser window over Engineer, screenshot of the desktop
 #   pxe.sh mqtt [s] [topic]     what the broker on the Engineer machine receives in s seconds (default 6, all topics), "topic payload" lines
@@ -102,6 +103,18 @@ except Exception: sys.exit("read: no answer (if a vm.sh line stands above: the E
 for v in d:
     val = round(v["value"], 3) if isinstance(v.get("value"), float) else v.get("value")
     print(v["path"].split("/", 1)[1], "=", val if "error" not in v else "ERROR " + v["error"]["reason"] + " (name wrong, or no { EHMI } flag)")' ;;
+  set)   # set <inst.VAR>=<value> ...: write values over REST (the variables need { EHMI }), like a page button does
+         shift; body=$("$PY" -c '
+import sys, json
+v = [{"path": a.split("=", 1)[0], "value": a.split("=", 1)[1], "valueType": "Constant"} for a in sys.argv[1:] if "=" in a]
+print(json.dumps({"pathPrefix": "Arp.Plc.Eclr/", "variables": v}))' "$@")
+         printf '%s' "$body" | "$V" pipe 30 '$b=[Console]::In.ReadToEnd(); $f=[IO.Path]::GetTempFileName(); [IO.File]::WriteAllText($f,$b)
+& curl.exe -sk -m 8 -X PUT -H "Content-Type: application/json" --data-binary "@$f" "https://'"$PLC"'/_pxc_api/api/variables"; Remove-Item $f' | "$PY" -c '
+import sys, json
+try: d = json.load(sys.stdin)["variables"]
+except Exception: sys.exit("set: no answer from the controller")
+for v in d:
+    print(v["path"].split("/", 1)[1], ":=", v.get("value") if "error" not in v else "ERROR " + v["error"]["reason"])' ;;
   wait)  # wait <inst.VAR> <low> <high> [seconds]: until the value is inside low..high (BOOL: 0 or 1), at most seconds (120)
          "$V" ps '$end=(Get-Date).AddSeconds('"${5:-120}"'); $v=$null
 while((Get-Date) -lt $end){ $j = & curl.exe -sk -m 6 "https://'"$PLC"'/_pxc_api/api/variables?pathPrefix=Arp.Plc.Eclr/&paths='"$2"'" | ConvertFrom-Json

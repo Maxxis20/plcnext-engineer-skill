@@ -14,7 +14,11 @@ What it does:
 - **Structured Text** (IEC 61131-3) as plain files, and **ladder / function block diagram** sheets described in
   a few lines of Python, laid out and wired by the generator.
 - **Operator pages** served by the controller: values, lamps, bars, buttons, pump and valve symbols, a light and
-  a dark look.
+  a dark look, trend charts over the controller's DataLogger, page switching.
+- **Step sequences** in Structured Text (SFC needs a separate licence): requirements checked one by one, settle
+  and supervision times, held alarms, manual overrides below the safety interlocks, shown on the page.
+- **Values into ClickHouse** over HTTP from Structured Text (batched, time stamped by the server), read back for
+  display, and a Grafana dashboard.
 - **I/O modules and Modbus RTU** through an Axioline serial module (AXL F RS UNI 1H): a probe for an unknown
   device, and a complete room sensor with reads and writes.
 - **Modbus TCP** with the firmware's own client: registers, floats, connection state.
@@ -31,7 +35,7 @@ What is in the skill:
 - `SKILL.md`: what the agent reads first.
 - `reference/findings.md`: the project file format, how the tool behaves when driven from outside, facts about
   the controller; each marked proven, seen or untested. Beside it `modbus-rtu.md`, `modbus-tcp.md`, `opcua.md`,
-  `profinet.md`, `mqtt-subscribe.md`.
+  `profinet.md`, `mqtt-subscribe.md`, `hmi-trends.md`, `hmi-design.md`, `sequence-st.md`, `clickhouse.md`.
 - `scripts/pxe.sh`: the driver. Build, open, read errors, write to the controller, state, values, operator page,
   screenshots.
 - `scripts/pxproj.py`, `scripts/pxld.py`, `scripts/pxhmi.py`: project, ladder / function block diagram and
@@ -55,6 +59,13 @@ and the probe that finds address, register base and word order of an unknown dev
 </p>
 
 ![Modbus RTU probe: device address, function and start address chosen on the page, raw and decoded values](examples/rs-uni-modbus/page.png)
+
+A pump start sequence over Profinet: the step flow, the drive, the active step's checklist with its settle and
+supervision times, and the interlocks as a ladder; running, and held by an alarm.
+
+![Pump start sequence: operator page while the pump runs](examples/pump-sequence/img/pump-running.png)
+
+![Pump start sequence: alarm, no running feedback within the step's supervision time](examples/pump-sequence/img/pump-alarm.png)
 
 ## What you need
 
@@ -134,13 +145,17 @@ $P hmi page.png                            # the operator page in a browser, scr
 | `examples/opcua-pair` | two controllers: A serves, B's firmware client reads and writes, a counter shows the link | built; the same pattern ran |
 | `examples/profinet-pair` | two controllers over Profinet: B (device) passes Modbus TCP values to A, A's counter comes back as an echo | device side built; the same pattern ran |
 | `examples/mqtt-subscribe` | values from an MQTT broker into the program (ChirpStack uplinks) | built; the blocks ran 8 hours |
+| `examples/pump-sequence` | pump start sequence in ST on A, drive and safety chain simulated on B over Profinet; interlocks, four pages, trends, ClickHouse; a REST test script | ran on two AXC F 2152, 41 of 41 checks |
+| `examples/clickhouse-log` | the ClickHouse client blocks on their own, the table, a Grafana dashboard | built; the blocks ran in pump-sequence |
 
 ## Limits
 
-- Structured Text, ladder and function block diagram (LD/FBD sheets, layout and wires generated). No SFC.
+- Structured Text, ladder and function block diagram (LD/FBD sheets, layout and wires generated). No SFC (it
+  needs a separate licence; sequences are written in ST).
 - I/O modules: ports and their links are generated; the module itself is added once in Engineer and kept in a
   base project. Tried with one module type (serial, Modbus RTU).
-- Operator page: texts, values, lamps, bars, buttons, pump and valve symbols. No trends, no alarm table.
+- Operator page: texts, values, lamps, bars, buttons, pump and valve symbols, trend charts. No alarm table.
+- ClickHouse: plain HTTP only (no TLS); the password is built into the project file.
 - Modbus TCP: reading registers only, one server per base project.
 - OPC UA client: without the vendor's client licence it runs 4 hours from the start of the controller's runtime.
 - Profinet: the device entry on the controller side is made once by hand (base project), and the device's name

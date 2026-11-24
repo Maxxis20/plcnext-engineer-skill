@@ -47,6 +47,21 @@ LOCRES = """<?xml version="1.0" encoding="utf-8"?>
 </ResourcesDocument>"""
 
 
+
+def env_tokens(text, where):
+    """%%ENV:NAME%% in a source becomes the value of the environment variable NAME (for a password that must be in
+    the program, e.g. a database client's). The value goes into the project file, never to the screen; build such a
+    project through your secret manager's runner (e.g. PLC_SECRET_RUN pxe.sh build ...). It must fit an ST string
+    literal: no ' and no $."""
+    def sub(m):
+        v = os.environ.get(m.group(1))
+        if v is None:
+            sys.exit("pxproj: %s needs the environment variable %s (not set)" % (where, m.group(1)))
+        if "'" in v or "$" in v or "\\" in v or "\n" in v:
+            sys.exit("pxproj: %s: the value of %s holds ' $ \\ or a line break, which an ST literal cannot take" % (where, m.group(1)))
+        return v
+    return re.sub(r"%%ENV:([A-Za-z_][A-Za-z0-9_]*)%%", sub, text)
+
 def gid(*parts):
     return str(uuid.uuid5(NS, "/".join(parts)))
 
@@ -252,7 +267,8 @@ class Project:
         self.content.append({"Id": pid, "Name": page.name + ".hmi", "Type": "Folder", "ParentId": app["Id"], "Area": "",
                              "Attributes": [{"Name": k, "Value": v} for k, v in attrs]})
         items = [
-            ("Definition.hmipagedef", "HmiPageDefinition", [("HmiPageId", pid), ("ParentIndex", "0")], page.xml(pid)),
+            ("Definition.hmipagedef", "HmiPageDefinition", [("HmiPageId", pid), ("ParentIndex", "0")],
+             re.sub(r"@page:(.*?)@", lambda m: gid("hmipage", m.group(1)), page.xml(pid))),     # button(page=...): the page's id
             ("Variables.hmivar", "HmiVariables", [("Visible", "False"), ("ParentIndex", "1")],
              '<?xml version="1.0" encoding="utf-8"?>\n<HmiVariables />'),
             ("Parameters.hmiparams", "HmiParameters", [("DisplayName", "Parameters"), ("HmiPageId", pid), ("Extension", ".hmiparams"), ("ParentIndex", "2")],
@@ -382,6 +398,33 @@ class Project:
                 t = re.sub(r"(Para\[@uID='opcuaClientModule%s'\]/Current\" Type=\"Ade\.Fdcml\.Core\.Boolean\">)\w+" % name, r"\g<1>" + val, t)
             self.files[ds] = (BOM if self.files[ds].startswith(BOM) else b"") + t.encode("utf-8")
 
+    def set_datalogger(self, sessions):
+        """DataLogger sessions (PLANT > PLCnext > Data Logger Sessions), the store an eHMI chart reads from. The base
+        project has the document already, empty. sessions = [{"name": "Speed", "sampling_ms": 1000, "variables":
+        ["M.TR_SPEED_OUT", ...]}, ...]; a variable is <instance>.<port> and must be a port of an instance (the
+        DataLogger records ports only). Written as Engineer 2026.6 writes a TSDB session (no BOM, CRLF)."""
+        path = next((p for p in self.files if p.endswith(".datalogger") and "/RecycleBin/" not in p), None)
+        if not path:
+            raise ValueError("datalogger: the base project has no DataLogger document")
+        ports = {"%s.%s" % (inst, name) for inst, prog in getattr(self, "instances", {}).items() for name, _, _ in self.ports.get(prog, [])}
+        x = ["<DataLoggerConfigDocument>"]
+        for s in sessions if isinstance(sessions, list) else [sessions]:
+            name = s["name"]
+            if not re.fullmatch(r"[\w.+-]+", name):
+                raise ValueError("datalogger: session name %r: letters, digits, _ - . + only" % name)
+            missing = [v for v in s["variables"] if v not in ports]
+            if missing:
+                raise ValueError("datalogger: not a port of an instance (flag it { OutputPort }): %s" % ", ".join(missing))
+            x.append('  <LogSession Name="%s" Datasink="TSDB" Destination="/opt/plcnext/logs/datalogger/%s" SamplingInterval="%dms" '
+                     'PublishInterval="%dms" BufferCapacity="10" Rollover="false" WriteInterval="1000" MaxFileSize="5000000" MaxFiles="-1" '
+                     'StoreChanges="false" DeleteRatio="5" TimestampFormat="Raw">' % (name, name, s.get("sampling_ms", 1000), s.get("publish_ms", 200)))
+            x += ['    <Variable Name="Arp.Plc.Eclr/%s" />' % v for v in s["variables"]]
+            x += ['    <TriggerCondition IsEnabled="false" PreCycles="10" PostCycles="10" TaskContext="" AutoReset="false">',
+                  '      <RpnItem Type="Constant"></RpnItem>', '      <RpnItem Type="Constant"></RpnItem>',
+                  '      <RpnItem Type="Operation">And</RpnItem>', '    </TriggerCondition>', '  </LogSession>']
+        x.append("</DataLoggerConfigDocument>")
+        self.files[path] = crlf("\n".join(x)).encode("utf-8")
+
     def add_library(self, name):
         """Reference a library that ships with the tool, e.g. 'Symbols-Schematic'."""
         path = "%SYSTEMLIBRARIES%/" + name + ".plcnlx2"
@@ -481,7 +524,7 @@ def build(pdir, out=None):
     for n, pou in enumerate(spec["pous"], start=1):
         p.remove_pou(pou["name"])                        # the base may be an earlier build of this program
         src = os.path.join(pdir, "src", pou["name"])
-        var = open(os.path.join(src, "Variables.var")).read()
+        var = env_tokens(open(os.path.join(src, "Variables.var")).read(), pou["name"])
         if os.path.exists(os.path.join(src, "Code.ld.py")):          # ladder / function block diagram (pxld.py)
             import importlib.util, pxld
             m = importlib.util.spec_from_file_location("code_" + pou["name"], os.path.join(src, "Code.ld.py"))
@@ -491,8 +534,9 @@ def build(pdir, out=None):
             mod.code(d)
             p.add_pou(pou["name"], pou["kind"], var, d.xml(), n, lang="ld")
         else:
-            p.add_pou(pou["name"], pou["kind"], var, open(os.path.join(src, "Code.st")).read(), n)
+            p.add_pou(pou["name"], pou["kind"], var, env_tokens(open(os.path.join(src, "Code.st")).read(), pou["name"]), n)
     p.set_tasks(spec["tasks"])
+    p.instances = {i["name"]: i["program"] for t in spec["tasks"] for i in t["instances"]}
     if "modbus_tcp" in spec:                             # registers of the remote server in the base project
         p.set_modbus_tcp(spec["modbus_tcp"])
     if any(p.ports.values()):                        # program variables flagged InputPort / OutputPort
@@ -505,13 +549,19 @@ def build(pdir, out=None):
         p.set_opcua(spec["opcua"].get("visibility", "marked"))
     if "opcua_client" in spec:
         p.set_opcua_client(spec["opcua_client"])
+    if "datalogger" in spec:                             # [{"name": "Speed", "sampling_ms": 1000, "variables": ["M.TR_SPEED_OUT"]}]
+        p.set_datalogger(spec["datalogger"])
     for lib in spec.get("libraries", []):
         p.add_library(lib)
     if "hmi" in spec:                                    # a Python file in the program dir with pages() -> [pxhmi.Page]
         import importlib.util
         m = importlib.util.spec_from_file_location("hmi_pages", os.path.join(pdir, spec["hmi"]))
         mod = importlib.util.module_from_spec(m); m.loader.exec_module(mod)
-        for i, page in enumerate(mod.pages()):
+        pages = mod.pages()
+        for i, page in enumerate(pages):
+            bad = set(re.findall(r"@page:(.*?)@", "".join(page.objects))) - {q.name for q in pages}
+            if bad:
+                raise ValueError("hmi: button(page=...) names no page of this project: %s" % ", ".join(sorted(bad)))
             p.add_hmi_page(page, start=(i == 0))
             if i == 0:
                 os.makedirs(HOME, exist_ok=True)

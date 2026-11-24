@@ -1,0 +1,225 @@
+VAR
+    STAT_H : BYTE { InputPort };
+    STAT_L : BYTE { InputPort };
+    RX01 : BYTE { InputPort };
+    RX02 : BYTE { InputPort };
+    RX03 : BYTE { InputPort };
+    RX04 : BYTE { InputPort };
+    RX05 : BYTE { InputPort };
+    RX06 : BYTE { InputPort };
+    RX07 : BYTE { InputPort };
+    RX08 : BYTE { InputPort };
+    RX09 : BYTE { InputPort };
+    RX10 : BYTE { InputPort };
+    RX11 : BYTE { InputPort };
+    RX12 : BYTE { InputPort };
+    RX13 : BYTE { InputPort };
+    RX14 : BYTE { InputPort };
+    RX15 : BYTE { InputPort };
+    RX16 : BYTE { InputPort };
+    RX17 : BYTE { InputPort };
+    RX18 : BYTE { InputPort };
+    CTRL_H : BYTE { OutputPort };
+    CTRL_L : BYTE { OutputPort };
+    TX01 : BYTE { OutputPort };
+    TX02 : BYTE { OutputPort };
+    TX03 : BYTE { OutputPort };
+    TX04 : BYTE { OutputPort };
+    TX05 : BYTE { OutputPort };
+    TX06 : BYTE { OutputPort };
+    TX07 : BYTE { OutputPort };
+    TX08 : BYTE { OutputPort };
+    TX09 : BYTE { OutputPort };
+    TX10 : BYTE { OutputPort };
+    TX11 : BYTE { OutputPort };
+    TX12 : BYTE { OutputPort };
+    SLAVE : INT := 1 { EHMI };
+    DARK : BOOL := TRUE { EHMI };
+    STEP : INT { EHMI };
+    TICKS : INT;
+    REQ : INT { EHMI };
+    KIND : INT { EHMI };
+    TOGGLE : BOOL;
+    SENT : BYTE;
+    N_OK : DINT { EHMI };
+    N_ERR : DINT { EHMI };
+    N_EXC : DINT { EHMI };
+    N_WRITE : DINT { EHMI };
+    QUIET : INT { EHMI };
+    COMM_OK : BOOL { EHMI };
+    RLEN : INT { EHMI };
+    R_FC : INT { EHMI };
+    D : DWORD;
+    G : REAL;
+    TEMP : REAL { EHMI, OPC };
+    HUM : REAL { EHMI, OPC };
+    CO2 : REAL { EHMI, OPC };
+    VOC : REAL { EHMI, OPC };
+    DEW : REAL { EHMI, OPC };
+    TSP : REAL { EHMI, OPC };
+    HSP : REAL { EHMI, OPC };
+    FAN : INT { EHMI, OPC };
+    FAN_REQ : INT { EHMI };
+    FAN_SHADOW : INT { EHMI };
+    CO2_Y : REAL { EHMI };
+    CO2_R : REAL { EHMI };
+    CO2_LEVEL : INT { EHMI };
+    COILS : WORD { EHMI };
+    UNOCC : BOOL { EHMI, OPC };
+    REMOTE_TEMP : REAL { EHMI, OPC };     (* written by another controller over OPC UA *)
+    REMOTE_HUM : REAL { EHMI, OPC };
+    REMOTE_BEAT : INT { EHMI, OPC };      (* counts up while the other controller writes *)
+    SYNCED : BOOL { EHMI };
+    SP_REQ10 : INT { EHMI };
+    SP_SHADOW10 : INT { EHMI };
+    SP_REQ : REAL { EHMI };
+    SPV10 : INT;
+    UNOCC_REQ : BOOL { EHMI };
+    UNOCC_SHADOW : BOOL { EHMI };
+    ADDR : INT;
+    QTY : INT;
+    FC : INT;
+    DEC : FB_IEEE;
+    ENC : FB_TOIEEE;
+END_VAR
+VAR
+    PN_IN : PND_IO_512 { InputPort };     (* Profinet: from device plc-b (B) *)
+    PN_OUT : PND_IO_512 { OutputPort };   (* Profinet: to device plc-b *)
+    B_TEMP : REAL { EHMI };               (* a sensor read over Modbus TCP at B, over Profinet here *)
+    B_HUM : REAL { EHMI };
+    B_VDD : INT { EHMI };
+    B_BEAT : INT { EHMI };                (* B's counter *)
+    B_MB_OK : BOOL { EHMI };              (* B's Modbus TCP server answers *)
+    B_ECHO : INT { EHMI };                (* our counter as B sends it back *)
+    B_ALIVE : BOOL { EHMI };              (* B's counter moved within the last 3 s *)
+    A_CNT : INT { EHMI };                 (* our counter to B *)
+    PN_ACC : REAL;
+    PN_SEEN : REAL;
+    PN_LAST : INT;
+    PN_W : WORD;
+END_VAR
+VAR
+    (* drive and safety chain at plc-b, over Profinet: from B byte 12 bits, 14-15 speed; to B byte 4 bits, 6-7 speed *)
+    DRV_READY : BOOL { EHMI };
+    DRV_RUNNING : BOOL { EHMI };          (* running feedback: at speed *)
+    DRV_FAULT : BOOL { EHMI };
+    DRV_SIS_OK : BOOL { EHMI };           (* safety chain closed *)
+    DRV_LOCAL : BOOL { EHMI };            (* the drive's local switch has control *)
+    SPEED_ACT : INT { EHMI };             (* per mille *)
+    RUN_CMD : BOOL { EHMI };
+    DRV_RESET : BOOL { EHMI };
+    SPEED_SP : INT := 600 { EHMI };       (* the sequence's speed, per mille *)
+    SPEED_OUT : INT { EHMI };             (* sent to the drive *)
+    TEMP_MAX10 : INT := 300 { EHMI };     (* start permissive: room temperature below, x 10 *)
+    TEMP_MAX : REAL { EHMI };
+    DRV_MODE_REQ : INT { EHMI };          (* page: 0 Auto, 1 Manual *)
+    DRV_MODE : INT { EHMI };              (* 0 Auto, 1 Manual, 2 Local (from the drive) *)
+    MAN_RUN : BOOL { EHMI };              (* page, Manual: Start / Stop *)
+    MAN_SP : INT := 500 { EHMI };         (* page, Manual: speed per mille *)
+    DRV_STATE : INT { EHMI };             (* 0 stopped, 1 running, 2 fault, 3 starting or stopping *)
+    (* interlocks: TRUE = condition fulfilled (contact closed) *)
+    IL_PN : BOOL { EHMI };
+    IL_SIS : BOOL { EHMI };
+    IL_DRVF : BOOL { EHMI };
+    FS_OK : BOOL { EHMI };                (* forced stop group: all closed *)
+    IL_RDY : BOOL { EHMI };
+    IL_REM : BOOL { EHMI };
+    IL_TEMP : BOOL { EHMI };
+    PERM_OK : BOOL { EHMI };              (* start permissive group *)
+    IL_ACTIVE : INT { EHMI };             (* how many interlocks are open *)
+    (* start sequence: 0 idle, 1 PRECHECK, 2 START DRIVE, 3 RUNNING, 4 STOP *)
+    SQ_STEP : INT { EHMI };
+    SQ_MODE : INT { EHMI };               (* 0 Auto, 1 Manual *)
+    SQ_CMD : INT { EHMI };                (* page: 1 Start, 2 Stop, 3 Continue, 4 Next, 5 Selected, 6 Reset *)
+    SQ_SEL : INT := 1 { EHMI };           (* page: the step chosen for Selected *)
+    SQ_STATE : INT { EHMI };              (* 0 O idle, 1 R running, 2 H held, 3 F alarm, 4 S stopping *)
+    SQ_T : REAL { EHMI };                 (* time in the step, s *)
+    SQ_N : INT { EHMI };                  (* requirements of the step *)
+    RQ1 : BOOL { EHMI };
+    RQ2 : BOOL { EHMI };
+    RQ3 : BOOL { EHMI };
+    RQ4 : BOOL { EHMI };
+    RQ5 : BOOL { EHMI };
+    RQ_AT : INT { EHMI };                 (* the requirement being checked; SQ_N + 1 = all met *)
+    SETTLE : REAL { EHMI };               (* the step's settle time, s *)
+    SETTLE_T : REAL { EHMI };             (* settle time run so far *)
+    TMAX : REAL { EHMI };                 (* supervision time, s (0 = none) *)
+    SUP_T : REAL { EHMI };                (* supervision time used *)
+    SQ_ALARM : BOOL { EHMI };
+    AL_STEP : INT { EHMI };               (* the step of the alarm *)
+    AL_REQ : INT { EHMI };                (* the requirement that failed; 11 Profinet, 12 safety chain, 13 drive fault = forced stop *)
+    OV_CNT : INT { EHMI };                (* overrides used (Next, Selected) *)
+    OV_LAST : INT { EHMI };               (* the last override: 4 Next, 5 Selected *)
+    ACT_RPM : REAL { EHMI };              (* actual speed, rpm *)
+    RPM_NOM : INT := 1450 { EHMI };       (* nominal speed of the pump motor = 1000 per mille *)
+    MAN_RPM : INT := 725 { EHMI };        (* page, Manual: speed in rpm *)
+    SETTLE_PCT : REAL { EHMI };
+    SUP_PCT : REAL { EHMI };
+    OUT_RPM : REAL { EHMI };              (* speed sent to the drive, rpm *)
+    TS : REAL := 0.1;                     (* the task cycle, s *)
+    SQ_PREV : INT;
+    FBAD : INT;
+    TICK : REAL;
+    RST_T : REAL;
+    MODE_PREV : INT;
+    DB : BYTE;
+    DW : WORD;
+END_VAR
+VAR
+    (* trend pens: the DataLogger records ports only, so copies of page values as output ports (hmi.py, page Trends) *)
+    P1_SP_RPM : INT { OutputPort };       (* trend pen: speed setpoint, rpm *)
+    P1_ACT_RPM : INT { OutputPort };      (* trend pen: actual speed, rpm *)
+    TR_TEMP : REAL { OutputPort };        (* = TEMP, room temperature *)
+    TR_TEMP_MAX : REAL { OutputPort };    (* = TEMP_MAX, start permissive limit *)
+END_VAR
+VAR
+    (* ClickHouse: 1 s samples, sent every 10 s; read back: average speed per minute, 24 minutes *)
+    CH : FB_CH;
+    CH_TAGS : ARRAY[1..16] OF STRING[24];
+    CH_VALS : ARRAY[1..16] OF REAL;
+    CH_ON : BOOL := TRUE { EHMI };
+    CH_STATE : INT { EHMI };
+    CH_CODE : INT { EHMI };
+    CH_ROWS : UDINT { EHMI };
+    CH_ERR : UDINT { EHMI };
+    CH_DROP : UDINT { EHMI };
+    CH_PEND : INT { EHMI };
+    CH_AGE : REAL { EHMI };               (* s since the last stored batch *)
+    CH_QAGE : REAL { EHMI };              (* s since the last answer to the query *)
+    CH_QN : INT { EHMI };
+    H01 : REAL { EHMI };
+    H02 : REAL { EHMI };
+    H03 : REAL { EHMI };
+    H04 : REAL { EHMI };
+    H05 : REAL { EHMI };
+    H06 : REAL { EHMI };
+    H07 : REAL { EHMI };
+    H08 : REAL { EHMI };
+    H09 : REAL { EHMI };
+    H10 : REAL { EHMI };
+    H11 : REAL { EHMI };
+    H12 : REAL { EHMI };
+    H13 : REAL { EHMI };
+    H14 : REAL { EHMI };
+    H15 : REAL { EHMI };
+    H16 : REAL { EHMI };
+    H17 : REAL { EHMI };
+    H18 : REAL { EHMI };
+    H19 : REAL { EHMI };
+    H20 : REAL { EHMI };
+    H21 : REAL { EHMI };
+    H22 : REAL { EHMI };
+    H23 : REAL { EHMI };
+    H24 : REAL { EHMI };
+    L01 : STRING[8] { EHMI };             (* clock time under bar 1, 5, ... 24 *)
+    L05 : STRING[8] { EHMI };
+    L09 : STRING[8] { EHMI };
+    L13 : STRING[8] { EHMI };
+    L17 : STRING[8] { EHMI };
+    L21 : STRING[8] { EHMI };
+    L24 : STRING[8] { EHMI };
+    LTXT : STRING[8];
+    LI : INT;
+    LB : INT;
+    HHMM : INT;
+END_VAR

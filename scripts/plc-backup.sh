@@ -19,7 +19,7 @@ S=$(cd "$(dirname "$0")" && pwd); . "$S/config.sh"
 B="$PXE_HOME/backup"; mkdir -p "$B"
 P=/opt/plcnext/projects/PCWE
 SUM="cd $P && find . -type f -exec md5sum {} + | LC_ALL=C sort -k2 | md5sum | cut -c1-32; find . -type f | wc -l; find . -type f -size 0 | wc -l"
-info() { "$S/plc-ssh.sh" "head -1 /etc/plcnext/arpversion | sed 's/^[^:]*: *//'; $SUM" | tr -d '\r' | grep -v '^$'; }
+info() { "$S/plc-ssh.sh" "head -1 /etc/plcnext/arpversion | sed 's/^[^:]*: *//'; $SUM" 2>/dev/null | tr -d '\r' | grep -v '^$' || true; }
 local_sum() {   # local_sum <archive>: the same three lines as the controller gives, computed from the archive
   "$PY" - "$1" <<'PY'
 import sys, tarfile, hashlib

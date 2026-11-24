@@ -1,0 +1,68 @@
+{
+ "name": "DRVPN",
+ "base": "AXCF2152-2026.0-MBTCP",
+ "pous": [
+  {
+   "name": "MAIN",
+   "kind": "Program"
+  },
+  {
+   "name": "DRIVE",
+   "kind": "Program"
+  }
+ ],
+ "tasks": [
+  {
+   "name": "Cyclic100",
+   "interval_ms": 100,
+   "instances": [
+    {
+     "name": "M",
+     "program": "MAIN"
+    },
+    {
+     "name": "DRV",
+     "program": "DRIVE"
+    }
+   ]
+  }
+ ],
+ "target": {
+  "ip": "192.168.1.11",
+  "station": "plc-b"
+ },
+ "hmi_server": {
+  "login": false,
+  "rest": true
+ },
+ "hmi": "hmi.py",
+ "modbus_tcp": {
+  "ip": "192.168.1.50",
+  "unit": 1,
+  "port": 502,
+  "registers": [
+   {
+    "name": "T10",
+    "fc": 4,
+    "address": 1000
+   },
+   {
+    "name": "H10",
+    "fc": 4,
+    "address": 1001
+   },
+   {
+    "name": "VDD",
+    "fc": 4,
+    "address": 1015
+   }
+  ]
+ },
+ "io": {
+  "M.T10": "T10_input",
+  "M.H10": "H10_input",
+  "M.VDD": "VDD_input",
+  "M.MB_STATE": "STATE",
+  "M.MB_OFFLINE": "OFFLINE_CNT"
+ }
+}

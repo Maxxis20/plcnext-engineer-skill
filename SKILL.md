@@ -59,6 +59,7 @@ $P write                      # connect, Write and Start, wait until the control
 $P state                      # connected / project on the controller / memory / CPU load
 $P read M.TE1 M.TV1 M.ALARM   # current values straight from the controller, 3 s, no screen needed
 $P wait M.TE1 57 59 300       # block until M.TE1 is inside 57..59, at most 300 s (BOOL: wait M.ALARM 1 1)
+$P set M.SQ_CMD=1 M.SIM=true  # write variables over REST ({ EHMI }), as a page button does; no session needed
 $P hmi out.png                # the operator page in a browser window over Engineer, screenshot. Read the PNG.
 $P mqtt 6                     # what the broker receives in 6 s, "topic payload" lines (section MQTT below)
 $P tap 1150 622 [x y ...]     # click on the operator page at PAGE coordinates (the ones in hmi.py); several pairs = several clicks
@@ -128,6 +129,9 @@ $P shot out.png               # screenshot of the whole desktop. Read the PNG.
   with the client (`reference/modbus-tcp.md`). `io` links ports to process data (section "I/O modules and ports").
 - `opcua` (optional): `{"visibility": "marked"}` makes the controller's OPC UA server show the variables flagged
   `{ OPC }`. Every base comes with "none": without this the flag shows nothing (`reference/opcua.md`).
+- `datalogger` (optional): DataLogger sessions (TSDB) that record ports for trend charts on the page,
+  `[{"name": "Speed", "sampling_ms": 1000, "variables": ["M.TR_SPEED_ACT"]}]`. Ports only (`{ OutputPort }` copies
+  of the page's values). Write and Start starts them. `reference/hmi-trends.md`.
 - `opcua_client` (optional): connections of the firmware's OPC UA client to other servers and the variables it
   copies (`connections`, `groups` of type `Subscribe` / `Write`, `trust_all`). Section "OPC UA between
   controllers".
@@ -176,7 +180,12 @@ END_VAR
   a small test POU first and read the errors. Timers can be avoided by counting seconds with the cycle time
   (`acc := acc + TS;`).
 - Avoid IEC keywords and type names as variable names: `DT`, `T`, `EN`, `ENO`, `IN`, `OUT`, `TIME`, `DATE`. A
-  variable named like a function (`NEG`) gives a warning.
+  variable named like a function or POU (`NEG`, `RS`) gives a warning; one named `LEN` clashes with `LEN`. A
+  program instance named `D` is refused ("Invalid program instance name"); `DRV` works.
+- `%%ENV:NAME%%` anywhere in a source is replaced at build time with the environment variable `NAME` (the build
+  stops when it is not set): for a password the program itself needs, such as a database client's. Build
+  through the secret manager's runner; the built `.plcnx2` then holds the value, so never commit or share it.
+  Never pass a secret through a page variable: with login off, REST reads it back.
 - A program does not know its cycle time. Keep it in one variable (`TS : REAL := 0.1;` for a 100 ms task) and
   pass it to the blocks that integrate or delay.
 - With no I/O modules, put a plant model in a function block and feed the controller from it (`SIM` switch).
@@ -264,6 +273,23 @@ program: copy them from `examples/mqtt-subscribe/src/`. Plain TCP, no login, one
 itself. Read `reference/mqtt-subscribe.md` first: pins, states, error codes, the characters a topic may hold
 (no `#`, no space), a ChirpStack uplink as example.
 
+### Step sequences
+
+SFC needs a licence of its own (`LIC001 No license for SFC found`; without it the editor does not open) and
+`pxproj.py` does not generate it. Write the sequence in ST: one INT for the step, per step a list of requirements
+walked one by one, a settle time, a supervision time, an alarm held until Reset or Continue, Manual Next / Go to
+below the forced stop, outputs computed from step and interlocks after the sequence. Read
+`reference/sequence-st.md` first. Worked example with a drive simulator over Profinet, pages and a test script of
+41 checks: `examples/pump-sequence` (proven on two controllers).
+
+### Values into a database (ClickHouse)
+
+`FB_CH` and `FB_TXT` (`examples/clickhouse-log/src/`) store up to 16 values every second in ClickHouse over its
+HTTP interface (plain HTTP, batched inserts every 10 s, time stamps from the age of each sample, so the
+controller's clock is not used) and read a query's numbers back for display. A user of its own with
+`INSERT, SELECT, CREATE TABLE ON plc.*`; its password goes in with `%%ENV:NAME%%`. Read `reference/clickhouse.md`
+first: design, proven numbers, limits, security, Grafana.
+
 ### Ladder and function block diagram (`Code.ld.py`)
 
 A POU may have `Code.ld.py` instead of `Code.st`. It describes the diagram; `pxld.py` places the objects in
@@ -336,10 +362,13 @@ def pages():
 - Signatures (all in `scripts/pxhmi.py`):
   `text(id, x, y, w, h, text, size=16, color, weight=400, align="Left", visible=None)`;
   `value(id, x, y, w, h, expression, fmt="fixed1", + the keywords of text)`;
-  `rect(id, x, y, w, h, fill, line, line_width=1, radius=0, fill_by=None, grow=None, visible=None)`;
+  `rect(id, x, y, w, h, fill, line, line_width=1, radius=0, fill_by=None, grow=None, axis="x", visible=None)`
+  (`axis="y"`: a `grow` bar that grows upward from its bottom edge);
   `ellipse(id, x, y, w, h, fill, line, line_width=1, fill_by=None, visible=None)`;
   `line(id, x1, y1, x2, y2, color, width=1)`; `poly(id, points, fill, line, line_width=2, fill_by=None)`;
-  `button(id, x, y, w, h, text, write=None, step=None, size=14)`;
+  `button(id, x, y, w, h, text, write=None, step=None, size=14, page=None)` (`page="Trends"`: switch to that page);
+  `chart(id, x, y, w, h, session, pens, minutes=15, sampling_ms=1000, left=(0, 0), right=(0, 0))` (trend chart over a
+  DataLogger session: `reference/hmi-trends.md`);
   `pump(id, cx, cy, state, r=24, flow="right")`; `valve(id, cx, cy, position, size=20)`.
 - `value(...)` shows one decimal by default (`fmt="fixed1"`; `fixed0`, `fixed2` ...; `fmt=None` for a whole number
   or a text). Put the unit in a separate `text`.
@@ -352,7 +381,7 @@ def pages():
   per character (a 23-character label at size 13 measured 126 px). Make boxes generous; a too wide box costs
   nothing, but leave room for what stands to the right of it.
 - `button(..., step=(var, -5))`: whole numbers only, also negative, on REAL and INT (`0.1` is rejected with a
-  warning and the button does nothing). `button(..., write=(var, "10.0"))` sets a REAL, `"TRUE"` / `"FALSE"` a BOOL.
+  warning and the button does nothing, `0.5` with "Invalid step value": keep the value as an INT x 10, step by 5). `button(..., write=(var, "10.0"))` sets a REAL, `"TRUE"` / `"FALSE"` a BOOL.
 - `Pump`, `Valve`, `Control Valve` draw white while their BOOL is TRUE and grey while FALSE.
 - `pump(id, cx, cy, state, r=24, flow="right")`: a circle with an arrow, **centred on (cx, cy)**. Put the centre
   on the pipe's centre line (for a pipe `rect(x, y, w, 7)` that is `y + 3.5`). `state` is an expression: red at
@@ -378,6 +407,8 @@ def pages():
   `wait` window the dead band plus 1 degree on each side, or the wait times out (one run lost three waits of
   150 s that way). For a bench demonstration a shorter integral time than the description's is fair; say so.
 - Check the page with `pxe.sh hmi out.png` and Read the picture; fix overlaps and build again.
+- For a page that looks finished (palette, cards, status banner, step chips, checklist, mode switch, interlock
+  ladder, bars): `reference/hmi-design.md`, with `examples/pump-sequence/a/hmi.py`.
 - A light / dark look: a BOOL in the program, two buttons that write it, `fill_by=(var, [(0, light), (1, dark)])`
   on the areas, and each text twice with `visible=` (`examples/modbus-rtu-room-sensor/hmi.py`, helper `both`).
 
@@ -439,4 +470,8 @@ Values **into** the program from a broker: section "MQTT in".
 | `reference/opcua.md` | OPC UA server and the firmware's client between two controllers: users, passwords, certificates, log |
 | `reference/profinet.md` | Profinet between two controllers: device by system variables, controller base by hand, naming, byte layout |
 | `reference/mqtt-subscribe.md` | MQTT subscriber in Structured Text: the two blocks, states, characters, ChirpStack |
+| `reference/hmi-trends.md` | trend charts on the page: DataLogger sessions, port copies, time range and point limits, page switch |
+| `reference/hmi-design.md` | operator pages that look good: palette, cards, banner, step chips, checklist, mode switch, interlock ladder, bars |
+| `reference/sequence-st.md` | step sequences in ST (why not SFC), requirements, settle and supervision times, alarms, overrides, the page |
+| `reference/clickhouse.md` | values into ClickHouse over HTTP: batching, time stamps, read back, security, Grafana, alternatives |
 | `reference/findings.md` | file format, tool behaviour, controller facts: proven / seen / untested |

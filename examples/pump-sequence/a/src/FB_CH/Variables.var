@@ -1,0 +1,85 @@
+VAR_INPUT
+    ENABLE : BOOL;
+    HOST : STRING[40];                      (* ClickHouse server address, e.g. '192.168.1.60' *)
+    PORT : UINT := 8123;                    (* HTTP interface, plain (no TLS) *)
+    USER : STRING[40];
+    KEY : STRING[80];                       (* password; characters 40..126 only *)
+    TABLE : STRING[60] := 'plc.samples';   (* columns tag String, value Float64, ago_ms UInt32 (ts from ago_ms) *)
+    N_TAGS : INT;                           (* 1..16 values per sample *)
+    TAGS : ARRAY[1..16] OF STRING[24];
+    VALS : ARRAY[1..16] OF REAL;
+    SAMPLE_S : REAL := 1.0;                 (* sample every *)
+    SEND_S : REAL := 10.0;                  (* send what was collected every *)
+    QUERY : STRING[400];                    (* SELECT that returns numbers, one per line; ' as @ and " as ` (FB_TXT) *)
+    QUERY_S : REAL := 60.0;                 (* run QUERY every; 0 = never *)
+    TS : REAL := 0.1;                       (* cycle time of the calling task in s *)
+END_VAR
+VAR_OUTPUT
+    STATE : INT;                            (* 0 idle, 5 building rows, 6 building request, 1 opening, 2 sending, 3 waiting, 9 after an error *)
+    PENDING : INT;                          (* samples collected, not yet stored *)
+    N_ROWS : UDINT;                         (* rows the server accepted *)
+    N_POST : UDINT;                         (* requests answered with 200 *)
+    N_ERR : UDINT;                          (* requests that failed *)
+    N_DROP : UDINT;                         (* rows lost because the buffer was full *)
+    HTTP_CODE : INT;                        (* of the last answer; 0 = none *)
+    ERR_STATUS : WORD;                      (* socket STATUS of the last error; own: 16#0002 timeout, 16#0003 no answer, 16#0004 too long *)
+    OK_AGE : REAL;                          (* s since the last good insert *)
+    Q_VALS : ARRAY[1..48] OF REAL;          (* numbers of the last good query *)
+    Q_N : INT;
+    Q_AGE : REAL;                           (* s since the last good query (large = never) *)
+END_VAR
+VAR
+    SOCK : TCP_SOCKET;
+    SND : TCP_SEND;
+    RCV : TCP_RECEIVE;
+    HB : FB_TXT;                            (* request header *)
+    BB : FB_TXT;                            (* request body *)
+    TT : FB_TXT;                            (* turning names into bytes once *)
+    SOCK_ACT : BOOL;
+    RX_EN : BOOL;
+    TX_REQ : BOOL;
+    TX_LAST : BOOL;
+    TXBUF : ARRAY[0..12799] OF BYTE;
+    TX_LEN : INT;
+    RXCHUNK : ARRAY[0..1023] OF BYTE;
+    RXBUF : ARRAY[0..2047] OF BYTE;
+    RXFILL : INT;
+    SMP : ARRAY[0..959] OF REAL;            (* 60 samples x 16 values *)
+    SMP_T : ARRAY[0..59] OF DINT;           (* ms clock of each sample *)
+    NSMP : INT;
+    CLK : DINT;                             (* ms since start *)
+    SACC : REAL;
+    PACC : REAL;
+    QACC : REAL;
+    ACC : REAL;                             (* s in the present state *)
+    KIND : INT;                             (* 1 insert, 2 query *)
+    R_S : INT;                               (* building: next sample *)
+    USED : INT;                             (* samples in the request *)
+    INIT_DONE : BOOL;
+    TAGB : ARRAY[0..511] OF BYTE;           (* tag names as bytes, 32 per tag *)
+    TAGN : ARRAY[1..16] OF INT;
+    P1 : ARRAY[0..31] OF BYTE;              (* {"tag":"   *)
+    P1N : INT;
+    P2 : ARRAY[0..31] OF BYTE;              (* ","value":   *)
+    P2N : INT;
+    P3 : ARRAY[0..31] OF BYTE;              (* ,"ago_ms":   *)
+    P3N : INT;
+    P4 : ARRAY[0..31] OF BYTE;              (* }\n   *)
+    P4N : INT;
+    TMP : ARRAY[0..31] OF BYTE;
+    FAIL : BOOL;
+    FAIL_ST : WORD;
+    DONE_RX : BOOL;
+    BODY : INT;
+    V : REAL;
+    DV : REAL;
+    HAS : BOOL;
+    IS_NEG : BOOL;
+    FRAC : BOOL;
+    B : BYTE;
+    I : INT;
+    J : INT;
+    K : INT;
+    N : INT;
+    ROWS : INT;
+END_VAR

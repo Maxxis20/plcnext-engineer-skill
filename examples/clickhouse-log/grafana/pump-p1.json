@@ -1,0 +1,287 @@
+{
+ "dashboard": {
+  "uid": "plcnext-pump-p1",
+  "title": "PLCnext: pump P1",
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": {
+   "from": "now-15m",
+   "to": "now"
+  },
+  "panels": [
+   {
+    "id": 1,
+    "type": "timeseries",
+    "title": "Pump speed: setpoint and actual (rpm)",
+    "datasource": {
+     "type": "grafana-clickhouse-datasource",
+     "uid": "clickhouse"
+    },
+    "gridPos": {
+     "x": 0,
+     "y": 0,
+     "w": 12,
+     "h": 8
+    },
+    "targets": [
+     {
+      "refId": "A",
+      "datasource": {
+       "type": "grafana-clickhouse-datasource",
+       "uid": "clickhouse"
+      },
+      "editorType": "sql",
+      "format": 0,
+      "queryType": "timeseries",
+      "rawSql": "SELECT $__timeInterval(ts) AS time, tag, avg(value) AS v FROM plc.samples WHERE $__timeFilter(ts) AND tag IN ('SPEED_SP_RPM', 'SPEED_ACT_RPM') GROUP BY time, tag ORDER BY time"
+     }
+    ],
+    "fieldConfig": {
+     "defaults": {
+      "unit": "rotrpm",
+      "custom": {
+       "lineWidth": 2,
+       "fillOpacity": 8
+      },
+      "displayName": "${__field.labels.tag}"
+     },
+     "overrides": []
+    },
+    "options": {
+     "legend": {
+      "displayMode": "list",
+      "placement": "bottom"
+     },
+     "tooltip": {
+      "mode": "multi"
+     }
+    }
+   },
+   {
+    "id": 2,
+    "type": "timeseries",
+    "title": "Room temperature and start limit",
+    "datasource": {
+     "type": "grafana-clickhouse-datasource",
+     "uid": "clickhouse"
+    },
+    "gridPos": {
+     "x": 12,
+     "y": 0,
+     "w": 12,
+     "h": 8
+    },
+    "targets": [
+     {
+      "refId": "A",
+      "datasource": {
+       "type": "grafana-clickhouse-datasource",
+       "uid": "clickhouse"
+      },
+      "editorType": "sql",
+      "format": 0,
+      "queryType": "timeseries",
+      "rawSql": "SELECT $__timeInterval(ts) AS time, tag, avg(value) AS v FROM plc.samples WHERE $__timeFilter(ts) AND tag IN ('TEMP', 'TEMP_MAX') GROUP BY time, tag ORDER BY time"
+     }
+    ],
+    "fieldConfig": {
+     "defaults": {
+      "unit": "celsius",
+      "custom": {
+       "lineWidth": 2,
+       "fillOpacity": 8
+      },
+      "displayName": "${__field.labels.tag}"
+     },
+     "overrides": []
+    },
+    "options": {
+     "legend": {
+      "displayMode": "list",
+      "placement": "bottom"
+     },
+     "tooltip": {
+      "mode": "multi"
+     }
+    }
+   },
+   {
+    "id": 3,
+    "type": "timeseries",
+    "title": "Sequence step and drive state",
+    "datasource": {
+     "type": "grafana-clickhouse-datasource",
+     "uid": "clickhouse"
+    },
+    "gridPos": {
+     "x": 0,
+     "y": 8,
+     "w": 12,
+     "h": 8
+    },
+    "targets": [
+     {
+      "refId": "A",
+      "datasource": {
+       "type": "grafana-clickhouse-datasource",
+       "uid": "clickhouse"
+      },
+      "editorType": "sql",
+      "format": 0,
+      "queryType": "timeseries",
+      "rawSql": "SELECT $__timeInterval(ts) AS time, tag, avg(value) AS v FROM plc.samples WHERE $__timeFilter(ts) AND tag IN ('SQ_STEP', 'DRV_STATE', 'RUN_CMD') GROUP BY time, tag ORDER BY time"
+     }
+    ],
+    "fieldConfig": {
+     "defaults": {
+      "custom": {
+       "lineWidth": 2,
+       "fillOpacity": 0,
+       "lineInterpolation": "stepAfter"
+      },
+      "displayName": "${__field.labels.tag}"
+     },
+     "overrides": []
+    },
+    "options": {
+     "legend": {
+      "displayMode": "list",
+      "placement": "bottom"
+     },
+     "tooltip": {
+      "mode": "multi"
+     }
+    }
+   },
+   {
+    "id": 4,
+    "type": "timeseries",
+    "title": "Open interlocks",
+    "datasource": {
+     "type": "grafana-clickhouse-datasource",
+     "uid": "clickhouse"
+    },
+    "gridPos": {
+     "x": 12,
+     "y": 8,
+     "w": 12,
+     "h": 8
+    },
+    "targets": [
+     {
+      "refId": "A",
+      "datasource": {
+       "type": "grafana-clickhouse-datasource",
+       "uid": "clickhouse"
+      },
+      "editorType": "sql",
+      "format": 0,
+      "queryType": "timeseries",
+      "rawSql": "SELECT $__timeInterval(ts) AS time, tag, avg(value) AS v FROM plc.samples WHERE $__timeFilter(ts) AND tag IN ('IL_ACTIVE') GROUP BY time, tag ORDER BY time"
+     }
+    ],
+    "fieldConfig": {
+     "defaults": {
+      "custom": {
+       "lineWidth": 2,
+       "fillOpacity": 20,
+       "lineInterpolation": "stepAfter"
+      },
+      "displayName": "${__field.labels.tag}"
+     },
+     "overrides": []
+    },
+    "options": {
+     "legend": {
+      "displayMode": "list",
+      "placement": "bottom"
+     },
+     "tooltip": {
+      "mode": "multi"
+     }
+    }
+   },
+   {
+    "id": 5,
+    "type": "stat",
+    "title": "Rows in the last minute",
+    "datasource": {
+     "type": "grafana-clickhouse-datasource",
+     "uid": "clickhouse"
+    },
+    "gridPos": {
+     "x": 0,
+     "y": 16,
+     "w": 6,
+     "h": 4
+    },
+    "targets": [
+     {
+      "refId": "A",
+      "datasource": {
+       "type": "grafana-clickhouse-datasource",
+       "uid": "clickhouse"
+      },
+      "editorType": "sql",
+      "format": 1,
+      "queryType": "table",
+      "rawSql": "SELECT count() AS rows FROM plc.samples WHERE ts > now() - INTERVAL 1 MINUTE"
+     }
+    ]
+   },
+   {
+    "id": 6,
+    "type": "stat",
+    "title": "Newest row, s ago",
+    "datasource": {
+     "type": "grafana-clickhouse-datasource",
+     "uid": "clickhouse"
+    },
+    "gridPos": {
+     "x": 6,
+     "y": 16,
+     "w": 6,
+     "h": 4
+    },
+    "targets": [
+     {
+      "refId": "A",
+      "datasource": {
+       "type": "grafana-clickhouse-datasource",
+       "uid": "clickhouse"
+      },
+      "editorType": "sql",
+      "format": 1,
+      "queryType": "table",
+      "rawSql": "SELECT round(dateDiff('millisecond', max(ts), now64(3)) / 1000, 1) AS age FROM plc.samples"
+     }
+    ],
+    "fieldConfig": {
+     "defaults": {
+      "unit": "s",
+      "thresholds": {
+       "mode": "absolute",
+       "steps": [
+        {
+         "color": "green",
+         "value": null
+        },
+        {
+         "color": "orange",
+         "value": 20
+        },
+        {
+         "color": "red",
+         "value": 60
+        }
+       ]
+      }
+     },
+     "overrides": []
+    }
+   }
+  ],
+  "schemaVersion": 39
+ },
+ "overwrite": true
+}

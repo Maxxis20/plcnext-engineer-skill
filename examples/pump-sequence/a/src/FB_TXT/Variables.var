@@ -1,0 +1,26 @@
+VAR_INPUT
+    CMD : INT;                              (* 0 clear, 1 template text, 2 REAL with 3 decimals, 3 whole number, 5 raw text, 6 the bytes A[0..AN-1] *)
+    S : STRING[400];
+    R : REAL;
+    D : DINT;
+    A : ARRAY[0..31] OF BYTE;               (* CMD 6: these bytes *)
+    AN : INT;
+END_VAR
+VAR_OUTPUT
+    BUF : ARRAY[0..12287] OF BYTE;
+    NB : INT;                               (* bytes in BUF *)
+    OVER : BOOL;                            (* something did not fit *)
+END_VAR
+VAR
+    ASCII_TAB : STRING[100];
+    I : INT;
+    N : INT;
+    C : INT;
+    M : DINT;
+    IP : DINT;
+    FR : DINT;
+    DIG : ARRAY[0..11] OF BYTE;
+    ND : INT;
+    IS_NEG : BOOL;
+    K : INT;
+END_VAR

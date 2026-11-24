@@ -50,14 +50,16 @@ class Page:
         self.name, self.width, self.height, self.fill = name, width, height, fill
         self.objects, self.texts = [], {}
 
-    def _obj(self, typ, oid, x, y, w, h, attrs, fill, dynamics="", extra="", tab="false"):
+    def _obj(self, typ, oid, x, y, w, h, attrs, fill, dynamics="", extra="", tab="false", pivot=(0, 0)):
+        """pivot: the point (relative to x, y) that rotation and scaling keep in place; Origin = Location + pivot."""
+        px, py = pivot
         self.objects.append(
             '<HmiObject xsi:type="%s" Rotation="0" ID="%s" IsTabSelectable="%s" TabOrder="0" %s>\n'
             '<Origin><X>%g</X><Y>%g</Y></Origin>\n<Location><X>%g</X><Y>%g</Y></Location>\n'
-            '<TransformCenter><X>0</X><Y>0</Y></TransformCenter>\n%s%s\n'
+            '<TransformCenter><X>%g</X><Y>%g</Y></TransformCenter>\n%s%s\n'
             '<Fill xsi:type="SolidFill" Color="%s" />\n<DashStyle><Offset>0</Offset><Dashes /></DashStyle>\n'
             '<Size><Width>%g</Width><Height>%g</Height></Size>\n%s</HmiObject>'
-            % (typ, hid(oid), tab, attrs, x, y, x, y, dynamics, SCOPES, fill, w, h, extra))
+            % (typ, hid(oid), tab, attrs, x + px, y + py, x, y, px, py, dynamics, SCOPES, fill, w, h, extra))
 
     @staticmethod
     def _dyn(visible=None, text=None, fill=None, fmt=None):
@@ -89,16 +91,19 @@ class Page:
         self.text(oid, x, y, w, h, "0", value=expression, fmt=fmt, **kw)
 
     def rect(self, oid, x, y, w, h, fill="#FFECEDED", line="#FFCCD0D2", line_width=1, visible=None, fill_by=None,
-             radius=0, grow=None):
-        """grow = (expression, low, high): width follows the value from 0 to full (a bar)."""
+             radius=0, grow=None, axis="x"):
+        """grow = (expression, low, high): width (axis "x", grows to the right) or height (axis "y", grows upwards)
+        follows the value from 0 to full (a bar)."""
         attrs = 'LineColor="%s" LineWidth="%g" %s' % (line, line_width, FONT % (18, 400, "#FF3E3D40"))
         dyn = self._dyn(visible, fill=fill_by)
         if grow:
-            dyn += ('<Dynamic xsi:type="ScaleDynamic" LowRange="%g" HighRange="%g">%s<StartScale><X>0</X><Y>1</Y></StartScale>'
+            sx, sy = (0, 1) if axis == "x" else (1, 0)
+            dyn += ('<Dynamic xsi:type="ScaleDynamic" LowRange="%g" HighRange="%g">%s<StartScale><X>%d</X><Y>%d</Y></StartScale>'
                     '<EndScale><X>1</X><Y>1</Y></EndScale><MinPercentScale>0</MinPercentScale><MaxPercentScale>0</MaxPercentScale>'
-                    '</Dynamic>\n' % (grow[1], grow[2], expr("Expression", grow[0])))
+                    '</Dynamic>\n' % (grow[1], grow[2], expr("Expression", grow[0]), sx, sy))
         self._obj("Rectangle", oid, x, y, w, h, attrs, fill, dyn,
-                  "<CornerRadii><Width>%g</Width><Height>%g</Height></CornerRadii>\n" % (radius, radius))
+                  "<CornerRadii><Width>%g</Width><Height>%g</Height></CornerRadii>\n" % (radius, radius),
+                  pivot=(0, h) if grow and axis == "y" else (0, 0))
 
     def ellipse(self, oid, x, y, w, h, fill="#FFB8BCBF", line="#FF8A8F93", line_width=1, visible=None, fill_by=None):
         attrs = ('LineColor="%s" LineWidth="%g" %s IsTextWrapping="false" TextDirection="LeftToRight" HorizontalTextAlignment="Left" '
@@ -119,10 +124,13 @@ class Page:
             '</Segments></SubPaths>\n</HmiObject>'
             % (hid(oid), color, width, FONT % (18, 400, "#FF3E3D40"), x1, y1, x1, y1, SCOPES, x2 - x1, y2 - y1))
 
-    def button(self, oid, x, y, w, h, text, write=None, step=None, size=14):
-        """write = (variable, constant): set on click. step = (variable, amount): add on click."""
+    def button(self, oid, x, y, w, h, text, write=None, step=None, size=14, page=None):
+        """write = (variable, constant): set on click. step = (variable, amount): add on click. page = name of another
+        page of the project: show it on click (Engineer's "Load page"; pxproj puts in the page's id)."""
         self.texts[hid(oid) + ".Text"] = text
         act = ""
+        if page:
+            act = '<Action xsi:type="LoadPageAction" Gesture="Click" ID="A1" Page="@page:%s@" />\n' % escape(page)
         if write:
             act = ('<Action xsi:type="WriteValueAction" Gesture="Click" ID="A1" SourceType="Constant" SourceConstant=%s>'
                    '%s</Action>\n' % (quoteattr(str(write[1])), varref("DestinationVariableInstance", write[0])))
@@ -138,6 +146,40 @@ class Page:
         extra = ('<FillWhenDown xsi:type="SolidFill" Color="#FF8ACCD1" />\n<ImageArea><Width>50</Width><Height>50</Height></ImageArea>\n'
                  '<CornerRadii><Width>0</Width><Height>0</Height></CornerRadii>\n')
         self._obj("Button", oid, x, y, w, h, attrs, "#FFECEDED", act, extra, tab="true")
+
+    def chart(self, oid, x, y, w, h, session, pens, minutes=15, sampling_ms=1000, mode="Raw", left=(0, 0), right=(0, 0),
+              zoom=False, line="#FFCCD0D2"):
+        """Trend chart over a DataLogger session (pxproj set_datalogger / program.json "datalogger"); it shows only
+        what the session has recorded. pens = [(variable, colour, "Left" | "Right"), ...], one per variable of the
+        session, in the session's order (Engineer rebuilds the pens when they differ). left / right = (min, max) of
+        the axis, (0, 0) = automatic; the right axis is shown when a pen uses it. Raw mode: every sample, at most
+        1000 per pen, time range = samples x sampling interval; Downsample: at most 100 points over the range."""
+        cap = 1000 if mode == "Raw" else 100
+        samples = min(cap, int(minutes * 60000 / sampling_ms)) if mode == "Raw" else cap
+        span = samples * sampling_ms / 1000.0 if mode == "Raw" else minutes * 60.0   # Engineer recomputes it so in Raw
+        tr = "%03d:%02d:%06.3f" % (span // 3600, span % 3600 // 60, span % 60)
+        paths = ["Arp.Plc.Eclr/" + p[0] for p in pens]
+        trends = "".join('<Trend><VariablePath>%s</VariablePath><IsIncluded>true</IsIncluded><LineColor>#%s</LineColor>'
+                         '<Placement>%s</Placement></Trend>' % (pa, c.lstrip("#")[-6:], side)
+                         for pa, (_, c, side) in zip(paths, pens))           # colour as Engineer writes it: #RRGGBB
+        axis = lambda tag, vis, r: "<%s><Visible>%s</Visible><MinValue>%g</MinValue><MaxValue>%g</MaxValue></%s>" % (tag, vis, r[0], r[1], tag)
+        has_right = any(p[2] == "Right" for p in pens)
+        self.objects.append(
+            '<HmiObject xsi:type="HmiChart" Rotation="0" ID="%s" IsTabSelectable="false" TabOrder="0" LineColor="%s" LineWidth="1" %s '
+            'IsTextWrapping="false" TextDirection="LeftToRight" HorizontalTextAlignment="Left" GuiStyle="Flat" TextMarginTop="0" '
+            'TextMarginBottom="0" TextMarginLeft="0" TextMarginRight="0" EndCapType="Square">\n'
+            '<Origin><X>%g</X><Y>%g</Y></Origin>\n<Location><X>%g</X><Y>%g</Y></Location>\n'
+            '<TransformCenter><X>0</X><Y>0</Y></TransformCenter>\n%s\n<DashStyle><Offset>0</Offset><Dashes /></DashStyle>\n'
+            '<Size><Width>%g</Width><Height>%g</Height></Size>\n<Trends>%s</Trends>\n'
+            '<DataLoggerSessionRef><InstanceName>%s</InstanceName><Paths>%s</Paths></DataLoggerSessionRef>\n'
+            '<MinimumInterval>%d</MinimumInterval>\n<DataMode>%s</DataMode>\n<TrendSampleSize>%d</TrendSampleSize>\n'
+            '<AllAvailableOnTimeRange>false</AllAvailableOnTimeRange>\n<XScaleDisplayMode>MM:SS</XScaleDisplayMode>\n'
+            '<PreloadData>false</PreloadData>\n<AllowZoom>%s</AllowZoom>\n%s\n%s\n'
+            '<HorizontalAxis><MajorTickCount>0</MajorTickCount><MinorTickCount>0</MinorTickCount></HorizontalAxis>\n'
+            '<TimeRange>%s</TimeRange>\n</HmiObject>'
+            % (hid(oid), line, FONT % (18, 400, "#FF3E3D40"), x, y, x, y, SCOPES, w, h, trends, escape(session),
+               "".join("<string>%s</string>" % pa for pa in paths), sampling_ms, mode, samples, str(zoom).lower(),
+               axis("LeftAxis", "true", left), axis("RightAxis", str(has_right).lower(), right), tr))
 
     def poly(self, oid, points, fill="#FFFFFFFF", line="#FF2B2F33", line_width=2, fill_by=None, visible=None):
         """Closed shape through the points [(x, y), ...], filled."""
