@@ -2,7 +2,8 @@
 
 Controller A, controller B (a Profinet device) and a SCALANCE XC216 managed switch in one MRP ring: the switch is
 the MRP manager, A and B are clients. A runs the pump sequence of `../pump-sequence` and adds a page "Network"
-that shows the ring and the Profinet state of every device, read by the program itself:
+that shows the ring and the Profinet state of every device, read by the program itself (the switch's CLI side,
+its MRP state and naming: [scalance-xc200-skill](https://github.com/Maxxis20/scalance-xc200-skill)):
 
 - the ring A - B - switch with its three cables, "Ring closed / open / unknown", how often it opened, the
   manager's two ring ports (forwarding / blocked / no link) and the last five ring and link changes;
@@ -54,7 +55,8 @@ sections "MRP ring redundancy" and "Diagnosis on the controller".
    runner, e.g. `op run -- scripts/pxe.sh build examples/profinet-mrp-ring/a`. Without a database set any value
    and `CH_ON := FALSE`. The built `.plcnx2` then holds the password: do not share it.
 4. **Names on the network**: B, the switch and the p-net device by Online Devices, once each. The switch may
-   refuse it until its DCP server is set writable on its CLI (`../../reference/profinet.md`, "Naming the switch").
+   refuse it until its DCP server is set writable on its CLI (`../../reference/profinet.md`, "Naming the switch";
+   the CLI steps are in the [scalance-xc200-skill](https://github.com/Maxxis20/scalance-xc200-skill)).
 5. **Cabling: a line first, the ring last.** Switch port 1 - A port 1, A port 2 - B port 1, write B and A, check
    that the switch is MRP manager, then B port 2 - switch port 2. The p-net device and the Engineer machine go on
    other ports of the switch.

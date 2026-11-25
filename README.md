@@ -25,6 +25,9 @@ What it does:
 - **OPC UA between two controllers**: one serves, the other's firmware client reads and writes.
 - **Profinet between two controllers**: one is the Profinet controller, the other a Profinet device; up to 512
   bytes each way, in real time.
+- **Profinet MRP ring** with a managed switch as ring manager: ring state, device diagnosis and the switch's own
+  diagnosis on a page. The switch side (CLI, backups, MRP state, Profinet naming) is a separate skill:
+  [scalance-xc200-skill](https://github.com/Maxxis20/scalance-xc200-skill).
 - **MQTT out** with the firmware's own client (and a FUXA view of the values), and **MQTT in** with a small
   MQTT client in Structured Text (ChirpStack uplinks, for example).
 - **Backup and restore** of a controller's project, checked by checksum against the controller.
@@ -68,7 +71,8 @@ supervision times, and the interlocks as a ladder; running, and held by an alarm
 ![Pump start sequence: alarm, no running feedback within the step's supervision time](examples/pump-sequence/img/pump-alarm.png)
 
 A Profinet MRP ring of two controllers and a managed switch as ring manager: the ring state read from the ports,
-each device's connection and diagnosis, and the switch's own diagnosis as text.
+each device's connection and diagnosis, and the switch's own diagnosis as text (the switch itself is driven by the
+[scalance-xc200-skill](https://github.com/Maxxis20/scalance-xc200-skill)).
 
 ![Profinet MRP ring: Network page, ring closed, no diagnosis on any device](examples/profinet-mrp-ring/img/network-fixed.png)
 
