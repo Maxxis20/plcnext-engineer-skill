@@ -188,12 +188,59 @@ Worked out on firmware 2025.6.0; the same was seen on 2026.0.2 unless a line say
     (`cat /etc/plcnext/arpversion`). The web interface has its own Backup & restore page (System), not tried.
   - The project on a controller is compiled (`Plc/Eclr/eCLR.img`): type and variable names can be read out of
     it, the source cannot. `sudo` also lists `recover-plcnext` / `recover-axcf2152`: the factory reset, never.
+- **Getting the firmware** (**proven** 2026-11-25, 2026.6.1): the controller's product page on phoenixcontact.com >
+  Firmware > the version > the zip (e.g. `AXC_F_2152_FW_2026_6_1.zip`, 243 MB: the `.raucb`, the change notes, the
+  user manual). The site refuses scripted downloads (curl: 403 "Access Denied" from its CDN, also with browser
+  headers), so it goes through a real browser, and the download dialog asks to **accept the software licence
+  terms**: that is the user's decision, ask before ticking it. Check the zip (`unzip -t`), take the `.raucb` and keep
+  the change notes; read them before updating (2026.6.0: after a **downgrade** from 2026.6 to 2026.0 LTS or older a
+  factory reset is needed, otherwise admin cannot log in over SSH/SFTP; admin may use `loginctl` / lingering).
 - Firmware update: file `axcf2152-<version>.raucb` (inside the zip from the product page). Any firmware from
   2022.0 takes a 2026.0 file directly (change notes). Admin has no update command in `sudo -l` (2025.6); the
   web interface does it (Administration, software update: upload through `/arp_api/upload/`, then a service
   call). `su` to root from a script hangs ("must be run from a terminal", and with a forced terminal no answer).
   Not scripted: done by hand in the web interface (System > Update: "Prepare and stop" first, only then the
   file can be selected, then "Start update"; 2025.6.0 to 2026.0.2 took six minutes, address and login kept).
+- **Firmware update without the web page** (**proven** 2026-11-25, 2026.0.2 -> 2026.6.1 on an AXC F 2152, about 8
+  minutes, address, login, project and Profinet kept; the 2026.0 project ran on unchanged): the same calls the web
+  page makes, run on the controller with `curl` against `https://127.0.0.1`.
+  - Login: the web page's OAuth flow, not the REST data login (`/_pxc_api/api/auth/access-token` answered
+    "wrongPassword" with the right admin password). GET `/_auth_api/authorize?response_type=code&client_id=<the
+    WBM client id from /var/www/plcnext/wbm/main*.js>&redirect_uri=%2Fwbm%2Foauth_callback&code_challenge=<S256>&
+    code_challenge_method=S256&state=x` -> 302 with `state=`; POST `/_auth_api/login` (form, url-encoded once more:
+    `username=..&password=..&state=..`) -> 302 to the callback with `code=`; POST `/_auth_api/token`
+    (`grant_type=authorization_code&code=..&client_id=..&redirect_uri=..&code_verifier=..`) -> Bearer token, 20 min.
+  - Calls: POST `/arp_internal_rsc/jrpc/Arp/Arp/Services/SoftwareUpdate/Services/Internal/ISoftwareUpdateService/<method>`
+    with a JSON body. `GetUpdaterList` -> `RaucUpdater`, `SoftwareUpdater`; the firmware component id is the
+    article name (`AXC F 2152`). `Prepare` (stops the PLC; `GetStatus` -> `StateOfPrepareForUpdate` 2),
+    `SetSoftwarePackage` {fileType 1 (pending), fileName: the `.raucb` on the controller, async true},
+    `GetTransferStatus` until `return` 0, `GetSoftwareVersion` {fileType 1} (the bundle's revision),
+    `InstallSoftwarePackage` {manufacturerUri, softwareRevision, patchIdentifiers [], autoResumePrepareForUpdate
+    true}; `GetStatus` shows "Verifying signature", "Copying image to rootfs.0" with percent, "The device is going
+    to reboot."; back after about 2 minutes. The updater deletes the `.raucb`.
+  - Space: the `.raucb` (230 MB) goes on the controller's writable partition (488 MB): installed apps and old
+    backups there can leave too little room.
+  - Apps through the same API: `/arp_rsc/jrpc/.../AppManager/Services/IAppManagerService/` `EnableInstallationMode`
+    {callerName}, `InstallApp` {filename, appIdentifier ""} (file group-writable, else "Access denied"),
+    `ListInstalledApps`, `StartApp` (only in installation mode), `DisableInstallationMode`. Unsigned apps are refused
+    ("App has no signature extension") unless `allowOnlySignedApps="false"` in
+    `/opt/plcnext/config/Services/AppManager/AppSignatureVerification.config` (test benches only). OCI container
+    apps install and mount but their container is never started on a controller without the permission layout
+    (`ARP_PERMISSION_LAYOUT_ENABLED` false, no `app_user`; still so after 2026.6.1).
+- **A full flash reboots the controller** (**proven** twice on an AXC F 2152, 2026-11-25): the system monitor
+  `SystemMemLoad.OFs.Load.Swd` (writable overlay file system, `mem="OFs" upperThresh="97" lowerThresh="90"
+  upperDur="1s" reaction="Watchdog"`, in `/etc/plcnext/device/System/Monitoring/`) fires at 97 % use of the 488 MB
+  partition (under about 15 MB free) and the hardware watchdog restarts the device. After such a restart the PLC
+  program is **not** started ("Loading Plc is prevented by 'Arp.System.Watchdog'", "PlcAutoRestart after system
+  watchdog is disabled"): a runtime restart (`sudo systemctl restart plcnext`) or a start from Engineer brings it
+  back. `data/System/Monitoring/ofsreserve.bin` (56 MB) is the firmware's own reserve: leave it. Keep big copies
+  (firmware bundles, app files, container images) in view of this: `df -m /media/rfs/rw` before and while.
+- **Container images on the internal flash do not fit** (seen with a 56 MB compressed / 140 MB unpacked image):
+  rootless `podman load` stages every layer unpacked in `/opt/system/tmp/container_images_*` (on the same flash)
+  besides the 140 MB it writes to its storage, and leaves the staging files behind when it is stopped (delete them
+  by hand). The app manager's OCI apps need the newer permission layout (`app_user`) as well. Use an SD card (it
+  becomes the writable storage) before running containers on an AXC F 2152. Firmware 2026.6 lets admin set
+  `loginctl enable-linger admin` (**proven**), so a container under admin can outlive the session.
 - Time (firmware 2026.0.2): chrony runs but has no source (`local stratum 10`) (**proven**). `/etc/chrony.conf`
   is writable by admin: add `server <ip> iburst` lines, `sudo systemctl restart chronyd`, check with `chronyc -n
   sources`. A controller with a second interface can serve the others (`allow <subnet>` in its own file). A

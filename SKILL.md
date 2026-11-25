@@ -442,6 +442,14 @@ The controller's firmware publishes by itself; nothing to program, only to flag 
 
 Values **into** the program from a broker: section "MQTT in".
 
+## The MCP server app (read-only, optional)
+
+If Phoenix Contact's "MCP for PLCnext Control" app runs on the controller (port 58080), `scripts/plc-mcp.py`
+logs in (OAuth with the controller's user, password from your secret runner) and calls its tools: device status,
+any program variable (`gds_read_variables`, also without `{ EHMI }`), notifications, files and logs, the Axioline
+configuration. Setup on an AXC F 2152 (its app manager does not start the container; image on an SD card) and
+what each tool did: `reference/mcp.md`. It cannot write: writing and testing stay with `pxe.sh`.
+
 ## Checking the result
 
 - `pxe.sh state` after `write`: `Project name:` must be the name `open` printed, CPU load sane.

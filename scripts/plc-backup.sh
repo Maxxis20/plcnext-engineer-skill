@@ -3,7 +3,7 @@
 # plc-backup.sh restore <archive> [--force]   - put the project of such an archive back on a controller, restart
 # plc-backup.sh check <archive>        - is an archive complete (checksum of the project as on the controller)
 #
-# backup: tar of /opt/plcnext (without logs), /etc/plcnext and /etc/systemd/network, read through the normal paths
+# backup: tar of /opt/plcnext (without logs and installed apps: reinstall those from their .app files), /etc/plcnext and /etc/systemd/network, read through the normal paths
 #   (never from the overlay's storage /media/rfs/rw/upperdir: files come out empty there, without an error). Saved as
 #   <work folder>/backup/<name or address-date>.tgz with a .info beside it (firmware, file count, checksum of the
 #   project folder), then checked against that .info. About 3 MB, under a minute.
@@ -44,7 +44,7 @@ case "${1:-}" in
     name=${2:-$PLC_HOST-$(date +%Y%m%d-%H%M)}; a="$B/$name.tgz"; w="$PXE_WORK\\backup\\$name.tgz"
     info > "${a%.tgz}.info"; [ "$(wc -l < "${a%.tgz}.info")" -ge 4 ] || { echo "backup: controller does not answer"; exit 1; }
     "$S/vm.sh" ps "New-Item -ItemType Directory -Force '$PXE_WORK\\backup' | Out-Null" >/dev/null
-    "$S/plc-ssh.sh" --out "$w" 'cd / && tar czf - --exclude=opt/plcnext/logs opt/plcnext etc/plcnext etc/systemd/network 2>/tmp/.bk.err; grep -c "Permission denied" /tmp/.bk.err >&2; rm -f /tmp/.bk.err' >/dev/null 2>&1 || true
+    "$S/plc-ssh.sh" --out "$w" 'cd / && tar czf - --exclude=opt/plcnext/logs --exclude=opt/plcnext/apps --exclude=opt/plcnext/installed_apps --exclude=opt/plcnext/.local opt/plcnext etc/plcnext etc/systemd/network 2>/tmp/.bk.err; grep -c "Permission denied" /tmp/.bk.err >&2; rm -f /tmp/.bk.err' >/dev/null 2>&1 || true
     "$S/vm.sh" get "$w" "$a"
     [ -s "$a" ] || { echo "backup: no archive arrived"; exit 1; }
     echo "backup: $a ($(du -k "$a" | cut -f1) kB), firmware $(head -1 "${a%.tgz}.info")"

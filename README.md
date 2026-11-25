@@ -30,6 +30,8 @@ What it does:
   [scalance-xc200-skill](https://github.com/Maxxis20/scalance-xc200-skill).
 - **MQTT out** with the firmware's own client (and a FUXA view of the values), and **MQTT in** with a small
   MQTT client in Structured Text (ChirpStack uplinks, for example).
+- **MCP server app on the controller** (Phoenix Contact's read-only MCP server): run on an AXC F 2152 with the
+  image on an SD card, logged in and called by script (`scripts/plc-mcp.py`), every tool group tried.
 - **Backup and restore** of a controller's project, checked by checksum against the controller.
 - **No controller needed** to start: the free AXC F 1152 simulation of PLCnext Engineer works too.
 
@@ -38,7 +40,8 @@ What is in the skill:
 - `SKILL.md`: what the agent reads first.
 - `reference/findings.md`: the project file format, how the tool behaves when driven from outside, facts about
   the controller; each marked proven, seen or untested. Beside it `modbus-rtu.md`, `modbus-tcp.md`, `opcua.md`,
-  `profinet.md`, `mqtt-subscribe.md`, `hmi-trends.md`, `hmi-design.md`, `sequence-st.md`, `clickhouse.md`.
+  `profinet.md`, `mqtt-subscribe.md`, `hmi-trends.md`, `hmi-design.md`, `sequence-st.md`, `clickhouse.md`,
+  `mcp.md` (Phoenix Contact's MCP server app on the controller: setup on an AXC F 2152, login, the 25 tools as found).
 - `scripts/pxe.sh`: the driver. Build, open, read errors, write to the controller, state, values, operator page,
   screenshots.
 - `scripts/pxproj.py`, `scripts/pxld.py`, `scripts/pxhmi.py`: project, ladder / function block diagram and
