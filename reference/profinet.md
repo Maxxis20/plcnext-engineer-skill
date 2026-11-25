@@ -90,6 +90,11 @@ A Profinet controller finds its device by **name of station**, not by address.
   tick); the exchange started within seconds.
 - Once per device: the name stays on the device. After a restart of B's runtime the exchange came back by itself
   within about 20 s (**proven**); after a power cycle of B: untested. Not done from a script.
+- **The controller's own name** (A): neither A's project nor a write sets it; A answers as the firmware's default
+  (`axcf2152-lan1`). A DCP Set NameOfStation (option 2, suboption 2, "permanent") from any host on the same
+  network renamed it (`plc-a`) while A ran its Profinet connections, without disturbing them; the name stayed
+  after the next write and runtime restart (**proven**). Cosmetic: devices do not use the controller's name, but
+  scans, LLDP neighbour tables (record 0x802A, the switch) then show it.
 - Close the Online Devices editor afterwards: while it was open, UI Automation found no control of Engineer at
   all and every driver command failed with "no controller in the PLANT tree" (**seen**).
 - **Address**: A sets B's IP address from its project when the connection starts (DCP). In the test it was the
