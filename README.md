@@ -67,6 +67,11 @@ supervision times, and the interlocks as a ladder; running, and held by an alarm
 
 ![Pump start sequence: alarm, no running feedback within the step's supervision time](examples/pump-sequence/img/pump-alarm.png)
 
+A Profinet MRP ring of two controllers and a managed switch as ring manager: the ring state read from the ports,
+each device's connection and diagnosis, and the switch's own diagnosis as text.
+
+![Profinet MRP ring: Network page, ring closed, no diagnosis on any device](examples/profinet-mrp-ring/img/network-fixed.png)
+
 ## What you need
 
 - A Windows machine with PLCnext Engineer 2026.6 and its licence.
@@ -162,4 +167,11 @@ $P hmi page.png                            # the operator page in a browser, scr
 - Profinet: the device entry on the controller side is made once by hand (base project), and the device's name
   on the network is assigned once by hand in Engineer. One device tried.
 - MQTT: the firmware client publishes only; the Structured Text client takes plain TCP, no login, one topic, QoS 0.
-- Nothing here is Phoenix Contact's software or data. PLCnext is their trademark.
+
+## Not affiliated
+
+An independent project, not made, endorsed or supported by Phoenix Contact. PLCnext and PLCnext Engineer
+are trademarks of Phoenix Contact GmbH & Co. KG. No Phoenix Contact software or files are included; you need your
+own licensed installation of PLCnext Engineer.
+
+MIT licence.
