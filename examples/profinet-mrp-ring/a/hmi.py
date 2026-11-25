@@ -446,11 +446,11 @@ def network():
         for k, (cond, txt, col) in enumerate([("%s AND %s = 2" % (lk, st), "blocked", INK),
                                               ("%s AND %s = 5" % (lk, st), "forwarding", INK), ("NOT " + lk, "no link", AMBER)]):
             p.text("Pt%dS%d" % (n, k), 744, y, 76, 18, txt, size=11, weight=700, color=col, visible=cond)
-    for oid, x, name, sub, ar in [("NA", 76, "A", "controller · .10", None), ("NB", 336, "B · plc-b", "device · .11", "NB_AR"),
+    for oid, x, name, sub, ar in [("NA", 76, "A · axcf2152-lan1", "controller · .10", None), ("NB", 336, "B · plc-b", "device · .11", "NB_AR"),
                                   ("NX", 596, "XC216", "manager · .20", "NX_AR")]:
         kw = {"fill_by": (D + ar, [(0, RED_L), (1, CARD)])} if ar else {}
         p.rect(oid, x, 156, 160, 70, fill=CARD, line=SLATE, line_width=2, radius=10, **kw)
-        p.text(oid + "T", x + 14, 166, 140, 24, name, size=17, weight=700, color=INK)
+        p.text(oid + "T", x + 14, 166, 144, 24, name, size=17 if len(name) < 12 else 14, weight=700, color=INK)
         p.text(oid + "S", x + 14, 194, 140, 18, sub, size=12, color=DIM)
         if ar:
             p.ellipse(oid + "L", x + 134, 168, 14, 14, fill=OK, line_width=0, fill_by=(D + ar, [(0, RED), (1, OK)]))
@@ -495,7 +495,7 @@ def network():
     CW, CY, CH = 299, 438, 258                          # card width, top, height; x = 24, 335, 646, 957
     xa, xb, xx, xp = 24, 24 + (CW + 12), 24 + 2 * (CW + 12), 24 + 3 * (CW + 12)
 
-    card(p, "Ca", xa, CY, CW, CH, "A · controller · 192.168.1.10")
+    card(p, "Ca", xa, CY, CW, CH, "A · axcf2152-lan1 · 192.168.1.10")
     x = xa + 18
     lamp_row("Ca1", x, 476, "Bus fault (BF)", "NOT " + D + "PN_BF", "device missing", "off")
     lamp_row("Ca2", x, 506, "System fault (SF)", "NOT " + D + "PN_SF", "on", "off")
