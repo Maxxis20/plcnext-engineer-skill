@@ -35,6 +35,12 @@ valve coloured by its position. Served by the controller at
 ![Normal operation](hmi-normal.png)
 ![P2 tripped: pump red, alarm, TV2 closed, TE2A falling](hmi-pump-fault.png)
 
+The same task in three languages (a later run: the agent wrote the controller in Structured Text, function block
+diagram and ladder, each with its own plant, and ran the trip, tapping and outdoor tests on all three; the settled
+values agreed within 0.01). Only the Structured Text version is in this folder.
+
+![Structured Text, function block diagram and ladder side by side](hmi-three-languages.png)
+
 ## Checked and not checked
 
 Checked on 2026-11-22: Engineer 2026.6, real AXC F 2152 with firmware 2025.6.0, no I/O modules, `SIM` = TRUE.

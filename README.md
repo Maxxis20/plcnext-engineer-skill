@@ -51,7 +51,11 @@ What is in the skill:
   dialog, a FUXA view.
 - `examples/`: worked examples (below).
 
-![District heating example: the operator page served by the controller](examples/dh-ex2/hmi-normal.png)
+The district heating example built three times by the agent in one run (27 min 46 s): Structured Text, function
+block diagram and ladder, each with its own plant model, side by side on one operator page served by the controller.
+The example folder holds the Structured Text version.
+
+![District heating example in Structured Text, function block diagram and ladder, one operator page](examples/dh-ex2/hmi-three-languages.png)
 
 Modbus RTU through the serial module: the room sensor example's page, shaped like the sensor (dark and light look),
 and the probe that finds address, register base and word order of an unknown device.
