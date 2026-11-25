@@ -347,6 +347,19 @@ How to use it: `profinet.md`. The file and controller side:
 - `pxe.sh` finds the controller's own PLANT node by itself (its label follows the station name);
   `PXE_CONTROLLER` is only needed to pick one of several. `pxproj.py --strip` also drops the ports of the
   programs of a project it built (data list roles and `VAR_CONFIG`), so a built project can be stripped to a base.
+- **Several devices** (2026-11-24, B and a SCALANCE XC216): each device's DAP items (`PN_AR_VALID`, ...) are
+  `OutPort` roles in `DataList.dl` with the same `<Name>`, told apart only by `SourceId` = the uuid of a `.ds`
+  under that device's folder in `PN_Master/`; the device's `.ds` holds its name of station as `IP:DnsName`.
+  `io` takes `"<station>/<item>"` for that (**proven**: ports of both devices linked, values live). Submodule
+  Node IDs (for `RDREC`) are `PN:NodeID` in the submodule's `.ds`. Diagnosis items and records: `profinet.md`,
+  "Diagnosis on the controller".
+- After a `write` the program was sometimes left loaded but stopped (seen 5 times on 2026-11-24, firmware
+  2026.0.2: runtime log `Plc state transition from 'Ready|Loading' to 'Stop|Warm'`, RUN lamp blinking, counters at
+  0, REST values frozen) although `write: ok`. `pxe.sh coldstart` did not reach it once (Engineer had lost the
+  connection); `sudo systemctl restart plcnext` started it every time. `pxe.sh write` now reads the last state
+  change from the runtime log and, when it is a stop, restarts the runtime once (`program: running after the
+  restart`; `PXE_AUTOSTART=0` only reports). The check needs `plc-ssh.sh` (password); without it the result is
+  "state unknown". The restart path itself has not yet been exercised by the script (the normal path, **proven**).
 
 ## Structured Text (proven 2026-11-23 on a controller: the MQTT subscriber blocks)
 

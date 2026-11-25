@@ -1,0 +1,384 @@
+VAR
+    STAT_H : BYTE { InputPort };
+    STAT_L : BYTE { InputPort };
+    RX01 : BYTE { InputPort };
+    RX02 : BYTE { InputPort };
+    RX03 : BYTE { InputPort };
+    RX04 : BYTE { InputPort };
+    RX05 : BYTE { InputPort };
+    RX06 : BYTE { InputPort };
+    RX07 : BYTE { InputPort };
+    RX08 : BYTE { InputPort };
+    RX09 : BYTE { InputPort };
+    RX10 : BYTE { InputPort };
+    RX11 : BYTE { InputPort };
+    RX12 : BYTE { InputPort };
+    RX13 : BYTE { InputPort };
+    RX14 : BYTE { InputPort };
+    RX15 : BYTE { InputPort };
+    RX16 : BYTE { InputPort };
+    RX17 : BYTE { InputPort };
+    RX18 : BYTE { InputPort };
+    CTRL_H : BYTE { OutputPort };
+    CTRL_L : BYTE { OutputPort };
+    TX01 : BYTE { OutputPort };
+    TX02 : BYTE { OutputPort };
+    TX03 : BYTE { OutputPort };
+    TX04 : BYTE { OutputPort };
+    TX05 : BYTE { OutputPort };
+    TX06 : BYTE { OutputPort };
+    TX07 : BYTE { OutputPort };
+    TX08 : BYTE { OutputPort };
+    TX09 : BYTE { OutputPort };
+    TX10 : BYTE { OutputPort };
+    TX11 : BYTE { OutputPort };
+    TX12 : BYTE { OutputPort };
+    SLAVE : INT := 1 { EHMI };
+    DARK : BOOL := TRUE { EHMI };
+    STEP : INT { EHMI };
+    TICKS : INT;
+    REQ : INT { EHMI };
+    KIND : INT { EHMI };
+    TOGGLE : BOOL;
+    SENT : BYTE;
+    N_OK : DINT { EHMI };
+    N_ERR : DINT { EHMI };
+    N_EXC : DINT { EHMI };
+    N_WRITE : DINT { EHMI };
+    QUIET : INT { EHMI };
+    COMM_OK : BOOL { EHMI };
+    RLEN : INT { EHMI };
+    R_FC : INT { EHMI };
+    D : DWORD;
+    G : REAL;
+    TEMP : REAL { EHMI, OPC };
+    HUM : REAL { EHMI, OPC };
+    CO2 : REAL { EHMI, OPC };
+    VOC : REAL { EHMI, OPC };
+    DEW : REAL { EHMI, OPC };
+    TSP : REAL { EHMI, OPC };
+    HSP : REAL { EHMI, OPC };
+    FAN : INT { EHMI, OPC };
+    FAN_REQ : INT { EHMI };
+    FAN_SHADOW : INT { EHMI };
+    CO2_Y : REAL { EHMI };
+    CO2_R : REAL { EHMI };
+    CO2_LEVEL : INT { EHMI };
+    COILS : WORD { EHMI };
+    UNOCC : BOOL { EHMI, OPC };
+    REMOTE_TEMP : REAL { EHMI, OPC };     (* written by another controller over OPC UA *)
+    REMOTE_HUM : REAL { EHMI, OPC };
+    REMOTE_BEAT : INT { EHMI, OPC };      (* counts up while the other controller writes *)
+    SYNCED : BOOL { EHMI };
+    SP_REQ10 : INT { EHMI };
+    SP_SHADOW10 : INT { EHMI };
+    SP_REQ : REAL { EHMI };
+    SPV10 : INT;
+    UNOCC_REQ : BOOL { EHMI };
+    UNOCC_SHADOW : BOOL { EHMI };
+    ADDR : INT;
+    QTY : INT;
+    FC : INT;
+    DEC : FB_IEEE;
+    ENC : FB_TOIEEE;
+END_VAR
+VAR
+    PN_IN : PND_IO_512 { InputPort };     (* Profinet: from device plc-b (B) *)
+    PN_OUT : PND_IO_512 { OutputPort };   (* Profinet: to device plc-b *)
+    B_TEMP : REAL { EHMI };               (* a sensor read over Modbus TCP at B, over Profinet here *)
+    B_HUM : REAL { EHMI };
+    B_VDD : INT { EHMI };
+    B_BEAT : INT { EHMI };                (* B's counter *)
+    B_MB_OK : BOOL { EHMI };              (* B's Modbus TCP server answers *)
+    B_ECHO : INT { EHMI };                (* our counter as B sends it back *)
+    B_ALIVE : BOOL { EHMI };              (* B's counter moved within the last 3 s *)
+    A_CNT : INT { EHMI };                 (* our counter to B *)
+    PN_ACC : REAL;
+    PN_SEEN : REAL;
+    PN_LAST : INT;
+    PN_W : WORD;
+END_VAR
+VAR
+    (* drive and safety chain at plc-b, over Profinet: from B byte 12 bits, 14-15 speed; to B byte 4 bits, 6-7 speed *)
+    DRV_READY : BOOL { EHMI };
+    DRV_RUNNING : BOOL { EHMI };          (* running feedback: at speed *)
+    DRV_FAULT : BOOL { EHMI };
+    DRV_SIS_OK : BOOL { EHMI };           (* safety chain closed *)
+    DRV_LOCAL : BOOL { EHMI };            (* the drive's local switch has control *)
+    SPEED_ACT : INT { EHMI };             (* per mille *)
+    RUN_CMD : BOOL { EHMI };
+    DRV_RESET : BOOL { EHMI };
+    SPEED_SP : INT := 600 { EHMI };       (* the sequence's speed, per mille *)
+    SPEED_OUT : INT { EHMI };             (* sent to the drive *)
+    TEMP_MAX10 : INT := 300 { EHMI };     (* start permissive: room temperature below, x 10 *)
+    TEMP_MAX : REAL { EHMI };
+    DRV_MODE_REQ : INT { EHMI };          (* page: 0 Auto, 1 Manual *)
+    DRV_MODE : INT { EHMI };              (* 0 Auto, 1 Manual, 2 Local (from the drive) *)
+    MAN_RUN : BOOL { EHMI };              (* page, Manual: Start / Stop *)
+    MAN_SP : INT := 500 { EHMI };         (* page, Manual: speed per mille *)
+    DRV_STATE : INT { EHMI };             (* 0 stopped, 1 running, 2 fault, 3 starting or stopping *)
+    (* interlocks: TRUE = condition fulfilled (contact closed) *)
+    IL_PN : BOOL { EHMI };
+    IL_SIS : BOOL { EHMI };
+    IL_DRVF : BOOL { EHMI };
+    FS_OK : BOOL { EHMI };                (* forced stop group: all closed *)
+    IL_RDY : BOOL { EHMI };
+    IL_REM : BOOL { EHMI };
+    IL_TEMP : BOOL { EHMI };
+    PERM_OK : BOOL { EHMI };              (* start permissive group *)
+    IL_ACTIVE : INT { EHMI };             (* how many interlocks are open *)
+    (* start sequence: 0 idle, 1 PRECHECK, 2 START DRIVE, 3 RUNNING, 4 STOP *)
+    SQ_STEP : INT { EHMI };
+    SQ_MODE : INT { EHMI };               (* 0 Auto, 1 Manual *)
+    SQ_CMD : INT { EHMI };                (* page: 1 Start, 2 Stop, 3 Continue, 4 Next, 5 Selected, 6 Reset *)
+    SQ_SEL : INT := 1 { EHMI };           (* page: the step chosen for Selected *)
+    SQ_STATE : INT { EHMI };              (* 0 O idle, 1 R running, 2 H held, 3 F alarm, 4 S stopping *)
+    SQ_T : REAL { EHMI };                 (* time in the step, s *)
+    SQ_N : INT { EHMI };                  (* requirements of the step *)
+    RQ1 : BOOL { EHMI };
+    RQ2 : BOOL { EHMI };
+    RQ3 : BOOL { EHMI };
+    RQ4 : BOOL { EHMI };
+    RQ5 : BOOL { EHMI };
+    RQ_AT : INT { EHMI };                 (* the requirement being checked; SQ_N + 1 = all met *)
+    SETTLE : REAL { EHMI };               (* the step's settle time, s *)
+    SETTLE_T : REAL { EHMI };             (* settle time run so far *)
+    TMAX : REAL { EHMI };                 (* supervision time, s (0 = none) *)
+    SUP_T : REAL { EHMI };                (* supervision time used *)
+    SQ_ALARM : BOOL { EHMI };
+    AL_STEP : INT { EHMI };               (* the step of the alarm *)
+    AL_REQ : INT { EHMI };                (* the requirement that failed; 11 Profinet, 12 safety chain, 13 drive fault = forced stop *)
+    OV_CNT : INT { EHMI };                (* overrides used (Next, Selected) *)
+    OV_LAST : INT { EHMI };               (* the last override: 4 Next, 5 Selected *)
+    ACT_RPM : REAL { EHMI };              (* actual speed, rpm *)
+    RPM_NOM : INT := 1450 { EHMI };       (* nominal speed of the pump motor = 1000 per mille *)
+    MAN_RPM : INT := 725 { EHMI };        (* page, Manual: speed in rpm *)
+    SETTLE_PCT : REAL { EHMI };
+    SUP_PCT : REAL { EHMI };
+    OUT_RPM : REAL { EHMI };              (* speed sent to the drive, rpm *)
+    TS : REAL := 0.1;                     (* the task cycle, s *)
+    SQ_PREV : INT;
+    FBAD : INT;
+    TICK : REAL;
+    RST_T : REAL;
+    MODE_PREV : INT;
+    DB : BYTE;
+    DW : WORD;
+END_VAR
+VAR
+    (* trend pens: the DataLogger records ports only, so copies of page values as output ports (hmi.py, page Trends) *)
+    P1_SP_RPM : INT { OutputPort };       (* trend pen: speed setpoint, rpm *)
+    P1_ACT_RPM : INT { OutputPort };      (* trend pen: actual speed, rpm *)
+    TR_TEMP : REAL { OutputPort };        (* = TEMP, room temperature *)
+    TR_TEMP_MAX : REAL { OutputPort };    (* = TEMP_MAX, start permissive limit *)
+END_VAR
+VAR
+    (* ClickHouse: 1 s samples, sent every 10 s; read back: average speed per minute, 24 minutes *)
+    CH : FB_CH;
+    CH_TAGS : ARRAY[1..16] OF STRING[24];
+    CH_VALS : ARRAY[1..16] OF REAL;
+    CH_ON : BOOL := TRUE { EHMI };
+    CH_STATE : INT { EHMI };
+    CH_CODE : INT { EHMI };
+    CH_ROWS : UDINT { EHMI };
+    CH_ERR : UDINT { EHMI };
+    CH_DROP : UDINT { EHMI };
+    CH_PEND : INT { EHMI };
+    CH_AGE : REAL { EHMI };               (* s since the last stored batch *)
+    CH_QAGE : REAL { EHMI };              (* s since the last answer to the query *)
+    CH_QN : INT { EHMI };
+    H01 : REAL { EHMI };
+    H02 : REAL { EHMI };
+    H03 : REAL { EHMI };
+    H04 : REAL { EHMI };
+    H05 : REAL { EHMI };
+    H06 : REAL { EHMI };
+    H07 : REAL { EHMI };
+    H08 : REAL { EHMI };
+    H09 : REAL { EHMI };
+    H10 : REAL { EHMI };
+    H11 : REAL { EHMI };
+    H12 : REAL { EHMI };
+    H13 : REAL { EHMI };
+    H14 : REAL { EHMI };
+    H15 : REAL { EHMI };
+    H16 : REAL { EHMI };
+    H17 : REAL { EHMI };
+    H18 : REAL { EHMI };
+    H19 : REAL { EHMI };
+    H20 : REAL { EHMI };
+    H21 : REAL { EHMI };
+    H22 : REAL { EHMI };
+    H23 : REAL { EHMI };
+    H24 : REAL { EHMI };
+    L01 : STRING[8] { EHMI };             (* clock time under bar 1, 5, ... 24 *)
+    L05 : STRING[8] { EHMI };
+    L09 : STRING[8] { EHMI };
+    L13 : STRING[8] { EHMI };
+    L17 : STRING[8] { EHMI };
+    L21 : STRING[8] { EHMI };
+    L24 : STRING[8] { EHMI };
+    LTXT : STRING[8];
+    LI : INT;
+    LB : INT;
+    HHMM : INT;
+END_VAR
+VAR_EXTERNAL
+    PNIO_SYSTEM_BF : BOOL;                (* bus fault: a configured device does not exchange data *)
+    PNIO_SYSTEM_SF : BOOL;                (* system fault *)
+    PNIO_DIAG_AVAILABLE : BOOL;
+    PNIO_MAINTENANCE_REQUIRED : BOOL;
+    PNIO_MAINTENANCE_DEMANDED : BOOL;
+    PNIO_CONFIG_STATUS : WORD;
+    PNIO_CONFIG_STATUS_READY : BOOL;
+    PNIO_CONFIG_STATUS_CFG_FAULT : BOOL;
+END_VAR
+VAR
+    (* Profinet state of the devices: items of their DAP, through ports ("io": "plc-b/PN_AR_VALID", ...) *)
+    B_AR_VALID : BOOL { InputPort };      (* plc-b: AR established, data exchanged *)
+    B_NO_DIAG : BOOL { InputPort };       (* plc-b: no diagnosis pending *)
+    B_APPL_RUN : BOOL { InputPort };      (* plc-b: application running *)
+    X_AR_VALID : BOOL { InputPort };      (* xc216 *)
+    X_NO_DIAG : BOOL { InputPort };
+    X_APPL_RUN : BOOL { InputPort };
+    NB_AR : BOOL { EHMI };                (* page copies *)
+    NB_DIAG : BOOL { EHMI };              (* TRUE = diagnosis pending *)
+    NB_RUN : BOOL { EHMI };
+    NX_AR : BOOL { EHMI };
+    NX_DIAG : BOOL { EHMI };
+    NX_RUN : BOOL { EHMI };
+    PN_BF : BOOL { EHMI };
+    PN_SF : BOOL { EHMI };
+    PN_DIAG : BOOL { EHMI };
+    PN_MAINT : BOOL { EHMI };             (* maintenance required or demanded *)
+    PN_CFG : INT { EHMI };                (* PNIO_CONFIG_STATUS *)
+    PN_CFG_OK : BOOL { EHMI };            (* configuration ready, no configuration fault *)
+    B_UNK : BOOL { EHMI };                (* no Profinet link to plc-b: B's bits are unknown *)
+    AL_AGE : REAL;                        (* s since the forced stop *)
+    (* MRP ring state from the XC216's ring ports (RDREC record 0x802A PDPortDataReal of Node IDs 31 and 32) *)
+    RR_PORT : INT := 2;                   (* the port read last: 1 or 2 *)
+    XP1_ST : INT { EHMI };                (* XC216 port 1 (cable 1, to A): 2 blocking, 5 forwarding *)
+    XP1_LINK : BOOL { EHMI };
+    XP1_AGE : REAL := 99.0;               (* s since its last answer *)
+    XP2_ST : INT { EHMI };                (* XC216 port 2 (cable 3, to B) *)
+    XP2_LINK : BOOL { EHMI };
+    XP2_AGE : REAL := 99.0;
+    RING_SIM : BOOL { EHMI };             (* test input, REST only: ring open as if cable 2 were pulled *)
+    SEG1 : INT := -1 { EHMI };            (* cable 1, 2, 3: 1 good, 0 broken, -1 unknown *)
+    SEG2 : INT := -1 { EHMI };
+    SEG3 : INT := -1 { EHMI };
+    RR : RDREC;
+    RR_BUF : ARRAY[0..127] OF BYTE;
+    RR_REQ : BOOL;
+    RR_PH : INT;
+    RR_T : REAL;
+    RR_OK : BOOL { EHMI };                (* both ports answered within 5 s *)
+    RR_N : DINT { EHMI };                 (* reads done *)
+    RR_NERR : DINT { EHMI };              (* reads failed *)
+    RR_ST : DINT { EHMI };                (* STATUS of the last failed read *)
+    RR_LEN : INT { EHMI };
+    RING_STATE : INT := -1 { EHMI };      (* -1 unknown, 0 open, 1 closed *)
+    RING_PREV : INT := -1;
+    RING_OPEN_CNT : DINT { EHMI };        (* how often the ring opened since the start *)
+    RING_LATCH : BOOL { EHMI };
+    RING_ACK : BOOL { EHMI };             (* page: Ack *)
+    RING_ACKD : BOOL { EHMI };
+    RING_WS : INT { EHMI };               (* warning: 0 none, 1 open, 2 closed again not acknowledged, 3 open acknowledged *)
+    RP : INT;
+    SBL : INT;
+    HI : INT;
+    HB : INT;
+    HX : STRING[2];
+    HEXT : STRING[16];                    (* hex digits, set in the code *)
+    (* record probe *)
+    PRB : RDREC;
+    PRB_BUF : ARRAY[0..127] OF BYTE;
+    PRB_ID : DINT := 30 { EHMI };         (* Node ID of the submodule *)
+    PRB_IDX : DINT := 32848 { EHMI };     (* record index 0..65535 *)
+    PRB_GO : BOOL { EHMI };
+    PRB_I : INT;
+    PRB_REQ : BOOL;
+    PRB_PH : INT;
+    PRB_T : REAL;
+    PRB_VALID : BOOL { EHMI };
+    PRB_LEN : INT { EHMI };
+    PRB_ST : DINT { EHMI };
+    PRB_HEX1 : STRING[200] { EHMI };
+    PRB_HEX2 : STRING[200] { EHMI };
+    (* event list: newest first; codes 1 ring open, 2 ring closed, 3 plc-b lost, 4 plc-b back, 5 xc216 lost,
+       6 xc216 back, 7 ring state unknown *)
+    NOW_T : DINT;                         (* 100 ms ticks since the start *)
+    NB_PREV : BOOL;
+    NX_PREV : BOOL;
+    NQ : INT;
+    QI : INT;
+    EVQ : ARRAY[1..4] OF INT;
+    EVC : ARRAY[1..5] OF INT;
+    EVT : ARRAY[1..5] OF DINT;
+    EV_N : DINT { EHMI };                 (* events since the start *)
+    EV1 : INT { EHMI };
+    EV2 : INT { EHMI };
+    EV3 : INT { EHMI };
+    EV4 : INT { EHMI };
+    EV5 : INT { EHMI };
+    EA1 : REAL { EHMI };                  (* s ago *)
+    EA2 : REAL { EHMI };
+    EA3 : REAL { EHMI };
+    EA4 : REAL { EHMI };
+    EA5 : REAL { EHMI };
+END_VAR
+VAR
+    (* the XC216's diagnosis (RDREC record 0xE00C through its DAP) *)
+    XD : RDREC;
+    XD_BUF : ARRAY[0..127] OF BYTE;
+    XD_IDX : INT := -8180;                (* 0xE00C, as INT: 0xE00C - 0x10000 *)
+    XD_REQ : BOOL;
+    XD_PH : INT;
+    XD_T : REAL := 4.0;
+    XD_OK : BOOL { EHMI };
+    XD_N : DINT { EHMI };                 (* reads done *)
+    XD_LEN : INT { EHMI };                (* 0 = no diagnosis *)
+    XD_ST : DINT { EHMI };
+    XD_BT : INT { EHMI };                 (* 16#10 DiagnosisData *)
+    XD_NB : INT { EHMI };                 (* DiagnosisData blocks in the record *)
+    XD_SLOT : INT { EHMI };
+    XD_SUB : DINT { EHMI };               (* subslot of the first entry: 32768 interface, 32769.. ports *)
+    XD_USI : DINT { EHMI };               (* 32768 channel diagnosis, 32770 extended *)
+    XD_CH : DINT { EHMI };                (* channel number *)
+    XD_CET : DINT { EHMI };               (* ChannelErrorType *)
+    XD_EXT : DINT { EHMI };               (* ExtChannelErrorType *)
+    XD_RIDX : DINT { EHMI };              (* ExtChannelAddValue, high word (parameter fault: the record index) *)
+    XD_ROFF : DINT { EHMI };              (* low word (parameter fault: the offset in that record) *)
+    XD_HEX1 : STRING[200] { EHMI };
+    XD_HEX2 : STRING[200] { EHMI };
+END_VAR
+VAR
+    (* Raspberry Pi 5 "pnpi" (rt-labs p-net v0.2.0 sample app, 192.168.1.30), a demo device: not in the ring, not in
+       any interlock. Slot 1 DIO 8xLogicLevel (1 byte in, 1 byte out), slot 2 Echo Module (Float32 + Unsigned32 each
+       way, big-endian on the wire; Engineer's typed items do the conversion). Gain = Echo module parameter (1). *)
+    PI_AR_VALID : BOOL { InputPort };     (* pnpi/PN_AR_VALID *)
+    PI_NO_DIAG : BOOL { InputPort };      (* pnpi/PN_NO_DIAG *)
+    PI_IN : BYTE { InputPort };           (* pnpi/Input 8 bits: bits 0..6 counter, bit 7 Button1 *)
+    PI_OUT : BYTE { OutputPort };         (* pnpi/Output 8 bits: bit 7 = LED 1 on the Pi *)
+    PI_EF_IN : REAL { InputPort };        (* echo float returned (= sent x gain) *)
+    PI_EI_IN : UDINT { InputPort };       (* echo integer returned (= sent x gain) *)
+    PI_EF_OUT : REAL { OutputPort };      (* echo float sent *)
+    PI_EI_OUT : UDINT { OutputPort };     (* echo integer sent *)
+    PI_AR_OK : BOOL { EHMI };             (* AR valid: data exchanged *)
+    PI_DIAG : BOOL { EHMI };              (* TRUE = the Pi reports a diagnosis *)
+    PI_CNT : INT { EHMI };                (* bits 0..6 of the input byte, the sample app's counter *)
+    PI_BTN1 : BOOL { EHMI };              (* bit 7 of the input byte, /var/lib/pnet/button1.txt on the Pi *)
+    PI_LED : BOOL { EHMI };               (* page: bit 7 of the output byte, /var/lib/pnet/pnet_led_1.txt on the Pi *)
+    PI_ALIVE : BOOL { EHMI };             (* the counter moved within the last second *)
+    PI_TX_F : REAL { EHMI };              (* echo sent: the room temperature *)
+    PI_TX_I : UDINT { EHMI };             (* echo sent: a counter, +1 every 2 s *)
+    PI_RX_F : REAL { EHMI };              (* echo returned *)
+    PI_RX_I : UDINT { EHMI };
+    PI_GAIN : UDINT := 1 { EHMI };        (* must equal the Echo module's gain parameter in the project *)
+    PI_ECHO_OK : BOOL { EHMI };           (* returned = sent x gain, checked 1.5 s after each change *)
+    PI_ECHO_N : DINT { EHMI };            (* round trips checked *)
+    PI_ECHO_BAD : DINT { EHMI };          (* of them wrong *)
+    PI_CNT_PREV : INT;
+    PI_CNT_T : REAL := 99.0;
+    PI_ET : INT;                          (* 100 ms ticks in the 2 s echo period *)
+END_VAR

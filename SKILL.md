@@ -205,7 +205,11 @@ END_VAR
 
 and `program.json` says which port goes where: `"io": {"M.STAT_L": "Status Word Low Byte", "M.CTRL_H": "Control
 Word High Byte"}` (instance.variable: name of the process data item as the module's Data List shows it). Types
-must fit (8 bit item: BYTE, 16 bit: WORD). Worked examples: `examples/rs-uni-modbus`, `examples/modbus-rtu-room-sensor`
+must fit (8 bit item: BYTE, 16 bit: WORD). When several Profinet devices have items of the same name (every
+device's DAP has `PN_AR_VALID`, `PN_NO_DIAG`, `PN_APPL_RUN`), put the device's name of station in front:
+`"M.B_AR_VALID": "plc-b/PN_AR_VALID"`, `"M.X_AR_VALID": "xc216/PN_AR_VALID"`. A plain name takes the first match
+(the build warns when it is ambiguous); text before a `/` that is no station name stays part of the item's name.
+Worked examples: `examples/rs-uni-modbus`, `examples/modbus-rtu-room-sensor`
 (proven on the controller). The D lamp in the Cockpit is green when the module on the
 rail matches the project.
 
@@ -264,6 +268,15 @@ device, in real time beside the other Ethernet traffic. Read `reference/profinet
 - A sets B's IP address from its project at the start: give A's project B's own address.
 - Bytes arrive in the order sent; pack wider values yourself (high byte first in the example). Check with
   `PND_S1_VALID_DATA_CYCLE` on B and a counter that B sends back to A. Example: `examples/profinet-pair`.
+- **Link state on A**: each device's `PN_AR_VALID` through an `InputPort` (`"plc-b/PN_AR_VALID"`). Take the link
+  from it, not from the data: the input bytes fall to 0 when the AR goes, so bits like "safety chain OK" read as
+  open before a heartbeat times out. Diagnosis of a device: `RDREC` of record 0xE00C, ring state of an MRP
+  manager: `RDREC` of its ring ports' 0x802A (`reference/profinet.md`, "Diagnosis on the controller").
+- **MRP ring** (a managed switch as MRP manager, A and B as clients): set in A's project, by hand, in the base
+  (switch from its GSDML, role Manager, ring ports; B's role Client is the default; A has no setting). Give the
+  unused instances MRP 2..4 domain UUIDs of their own, or the switch refuses the parameters (F lamp red). Cable a
+  line first, close the ring last. `reference/profinet.md`, "MRP ring redundancy"; example with a Network page,
+  ring state, device diagnosis and a third-party p-net device: `examples/profinet-mrp-ring`.
 
 ### MQTT in
 
@@ -432,6 +445,8 @@ Values **into** the program from a broker: section "MQTT in".
 ## Checking the result
 
 - `pxe.sh state` after `write`: `Project name:` must be the name `open` printed, CPU load sane.
+- `write` ends with `program: running`. `program: left in 'Stop|Warm'` is followed by one runtime restart; if it
+  still says stopped, see `reference/findings.md` (write leaves the program stopped).
 - `pxe.sh read ...`: values must be live and plausible. `ERROR NotExists` = wrong name or no `{ EHMI }` flag.
 - To exercise logic, give the page buttons that write test inputs (trip a pump, step a temperature), press them
   with `pxe.sh tap <x> <y>`, then `read` the reaction (a few seconds later) and take one `shot` as proof.
@@ -468,7 +483,7 @@ Values **into** the program from a broker: section "MQTT in".
 | `reference/modbus-rtu.md` | Modbus RTU through a serial module: steps, probe, frames, pitfalls |
 | `reference/modbus-tcp.md` | Modbus TCP with the firmware's own client: base project, registers, status items |
 | `reference/opcua.md` | OPC UA server and the firmware's client between two controllers: users, passwords, certificates, log |
-| `reference/profinet.md` | Profinet between two controllers: device by system variables, controller base by hand, naming, byte layout |
+| `reference/profinet.md` | Profinet between two controllers: device by system variables, controller base by hand, naming, byte layout, MRP ring, diagnosis on the controller (RDREC), a device from its GSDML |
 | `reference/mqtt-subscribe.md` | MQTT subscriber in Structured Text: the two blocks, states, characters, ChirpStack |
 | `reference/hmi-trends.md` | trend charts on the page: DataLogger sessions, port copies, time range and point limits, page switch |
 | `reference/hmi-design.md` | operator pages that look good: palette, cards, banner, step chips, checklist, mode switch, interlock ladder, bars |

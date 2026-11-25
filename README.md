@@ -146,6 +146,7 @@ $P hmi page.png                            # the operator page in a browser, scr
 | `examples/profinet-pair` | two controllers over Profinet: B (device) passes Modbus TCP values to A, A's counter comes back as an echo | device side built; the same pattern ran |
 | `examples/mqtt-subscribe` | values from an MQTT broker into the program (ChirpStack uplinks) | built; the blocks ran 8 hours |
 | `examples/pump-sequence` | pump start sequence in ST on A, drive and safety chain simulated on B over Profinet; interlocks, four pages, trends, ClickHouse; a REST test script | ran on two AXC F 2152, 41 of 41 checks |
+| `examples/profinet-mrp-ring` | MRP ring of A, B and a managed switch as manager; Network page with ring state (RDREC 0x802A), per-device AR and diagnosis, the switch's diagnosis (0xE00C) as text, a latched ring warning; a Raspberry Pi p-net device from its GSDML | ran on two AXC F 2152 and the switch; ring tests with pulled cables |
 | `examples/clickhouse-log` | the ClickHouse client blocks on their own, the table, a Grafana dashboard | built; the blocks ran in pump-sequence |
 
 ## Limits

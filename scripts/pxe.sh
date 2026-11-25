@@ -9,6 +9,7 @@
 #   pxe.sh disconnect            go offline (open does it by itself)
 #   pxe.sh errors                the error list of the open project
 #   pxe.sh write                 connect to the controller (login from Engineer's password store) and Write and Start;
+#                                then checks the program runs; a program left stopped gets one runtime restart (PXE_AUTOSTART=0: report only);
 #                                waits until the controller runs this project
 #   pxe.sh coldstart             start a program that is loaded but stopped (seen after the first write to the simulation)
 #   pxe.sh state                 connection, project on the controller, LEDs text, memory and CPU load
@@ -79,6 +80,21 @@ case "${1:-}" in
          echo "open: $(title)"; echo "$e2" ;;
   errors) uia 'press ^AID_Log_Messages$' >/dev/null 2>&1 || true; uia 'texts errors, |CellElement_[0-9]+_[35] = .{12}' | sed 's/^\[[^]]*\] //; s/^[A-Za-z_0-9]* = //' ;;
   write) front; cockpit
+         running() {  # after a write the program is sometimes left loaded but stopped ('Stop|Warm', RUN lamp blinking;
+                      # seen 4 times on 2026-11-24, firmware 2026.0.2). Read the runtime's last state change; if it is a
+                      # stop, restart the runtime once (PXE_AUTOSTART=0: only report). Needs plc-ssh.sh (password).
+           local st i
+           plcstate() { PLC_HOST=$PLC "$S/plc-ssh.sh" "grep -a 'Plc state transition' /opt/plcnext/logs/Arp.log | tail -1" 2>/dev/null \
+                        | tr -d '\r' | grep -o "to '[^']*'" | tail -1 | cut -d"'" -f2; }
+           for i in 1 2 3 4 5 6; do st=$(plcstate); [ "$st" = Running ] && { echo "program: running"; return 0; }; sleep 5; done
+           [ -n "$st" ] || { echo "program: state unknown (plc-ssh.sh not usable: password?); check the RUN lamp"; return 0; }
+           echo "program: left in '$st' after the write"
+           [ "${PXE_AUTOSTART:-1}" = 1 ] || { echo "program: start it with 'pxe.sh coldstart' or a runtime restart"; return 1; }
+           echo "program: restarting the runtime (about a minute)"
+           PLC_HOST=$PLC PLC_TIMEOUT=150 "$S/plc-ssh.sh" --sudo 'sudo -S -p "" /bin/systemctl restart plcnext' >/dev/null 2>&1 || true
+           for i in $(seq 1 24); do sleep 5; st=$(plcstate); [ "$st" = Running ] && { echo "program: running after the restart"; return 0; }; done
+           echo "program: still '$st' after the restart"; return 1
+         }
          connect() {   # no-op when connected; the login dialog only appears when Engineer has no session
            uia 'state AID_Connect / Disconnect' | grep -q "toggle=On" && return 0
            uia 'click AID_Connect / Disconnect' 'wait 20 ^AID_ButtonOK' | grep -q "id='AID_ButtonOK'" && uia 'press ^AID_ButtonOK$' >/dev/null
@@ -89,7 +105,7 @@ case "${1:-}" in
          uia 'click AID_Write and start combined_ActionButton' >/dev/null
          # the controller restarts its runtime on a download; Engineer often loses the connection then: reconnect and look
          for i in 1 2 3 4 5 6 7 8; do sleep 8; connect || continue
-           s=$(state); echo "$s" | grep -q "Project name: $want" && { echo "write: ok"; echo "$s"; exit 0; }
+           s=$(state); echo "$s" | grep -q "Project name: $want" && { echo "write: ok"; echo "$s"; running; exit $?; }
            # still connected and nothing arrived: the click did not take (too soon after the login), press again once
            [ "$i" = 3 ] && uia 'click AID_Write and start combined_ActionButton' >/dev/null; done
          echo "write: controller does not report $want"; state; exit 1 ;;

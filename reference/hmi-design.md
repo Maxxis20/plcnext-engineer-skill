@@ -148,5 +148,10 @@ of them from one loop, with grid lines as 1 px rects, axis texts, and the minute
   (`~/.plcnext-engineer/page-size`, written by every build that has an `hmi.py`). An offline build of another
   project changes where taps land on the page that is open: build the project you tap on last, or write its size
   back into that file.
+- Object ids are compared **without case**: `Cb1b` (a rect) and `Cb1B` (a text) gave "An HMI object with the ID
+  'obj_Cb1B' already exists" at `open`. Keep prefixes of different groups distinct.
+- A button cannot be hidden (no `visible`). For one that only applies sometimes (an Ack), cover it with a rect in
+  the colour of what is behind it, `visible` while it does not apply; for a banner whose colour follows a state, give
+  the cover the same `fill_by` (a ring warning banner was built this way).
 - Text does not wrap and is clipped at its box: make boxes generous, and check the page picture
   (`pxe.sh hmi out.png`) after each change.

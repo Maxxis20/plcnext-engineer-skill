@@ -170,6 +170,38 @@ class Project:
                                  "Attributes": [{"Name": n, "Value": v} for n, v in attrs]})
             self.files["PROJECT/Content/" + stream] = data
 
+    def device_sources(self, station):
+        """SourceIds (uuids of the .ds files) of every module and submodule of the Profinet device whose name of
+        station is `station`: all .ds files in the folder of the .ds that holds that IP:DnsName, and below."""
+        pat = re.compile(r"type='IP:DnsName'\]\" Type=\"[^\"]+\">%s</InstVal>" % re.escape(station))
+        dirs = [p.rsplit("/", 1)[0] + "/" for p, d in self.files.items()
+                if p.endswith(".ds") and "/PN_Master/" in p and pat.search(d.decode("utf-8-sig", "replace"))]
+        return {p.rsplit("/", 1)[1][:-3] for p in self.files if p.endswith(".ds") and any(p.startswith(d) for d in dirs)}
+
+    def find_item(self, dl, item):
+        """Position of the process data item `item` in the data list. `item` is the name the Data List shows
+        ("DI4096"), or "<station>/<name>" ("xc216/PN_AR_VALID") to pick that Profinet device's item when several
+        devices have items of the same name. An unqualified name takes the first match, as before."""
+        station, _, name = item.rpartition("/")
+        srcs = self.device_sources(station) if station else set()
+        if station and not srcs:                         # not a station name: the whole text is the item's name
+            station, name = "", item
+        hits = []
+        for m in re.finditer(r"<Name>%s</Name>" % re.escape(name), dl):
+            role = dl[dl.rindex("<Role ", 0, m.start()):m.start()]
+            sid = re.search(r'SourceId="([^"]+)"', role)
+            hits.append((m.start(), sid.group(1) if sid else ""))
+        if station:
+            hits = [h for h in hits if h[1] in srcs]
+            if not hits:
+                raise ValueError("io: device %r has no process data item named %r" % (station, name))
+        if not hits:
+            raise ValueError("io: no process data item named %r in the base project" % item)
+        if not station and len({h[1] for h in hits}) > 1:
+            print("pxproj: io item %r exists in several devices; the first is used (qualify it: \"<station>/%s\")"
+                  % (name, name), file=sys.stderr)
+        return hits[0][0]
+
     def add_ports(self, tasks, io):
         """Ports of the programs (variables flagged InputPort / OutputPort) for every instance: an entry in the
         resource's global variables and one in the data list. io = {"M.CTRL": "Control Word"} puts the port into
@@ -198,9 +230,7 @@ class Project:
                             % ("InPort" if "InputPort" in flags else "OutPort", pid, plc, typ, "EHMI" in flags, "OPC" in flags,
                                "PROFICLOUD" in flags, name, typ, i["name"], i["name"]))
                     if full in io:
-                        k = dl.find("<Name>%s</Name>" % io[full])
-                        if k < 0:
-                            raise ValueError("io: no process data item named %r in the base project" % io[full])
+                        k = self.find_item(dl, io[full])
                         k = dl.index("</Role>\n", k) + len("</Role>\n")
                         dl = dl[:k] + role + dl[k:]
                         used.add(full)

@@ -1,0 +1,116 @@
+{
+ "name": "PUMPPI",
+ "base": "AXCF2152-2026.0-RSUNI-PNB-MRP-PI",
+ "pous": [
+  {
+   "name": "FB_TXT",
+   "kind": "FunctionBlock"
+  },
+  {
+   "name": "FB_CH",
+   "kind": "FunctionBlock"
+  },
+  {
+   "name": "FB_IEEE",
+   "kind": "FunctionBlock"
+  },
+  {
+   "name": "FB_TOIEEE",
+   "kind": "FunctionBlock"
+  },
+  {
+   "name": "MAIN",
+   "kind": "Program"
+  }
+ ],
+ "tasks": [
+  {
+   "name": "Cyclic100",
+   "interval_ms": 100,
+   "instances": [
+    {
+     "name": "M",
+     "program": "MAIN"
+    }
+   ]
+  }
+ ],
+ "target": {
+  "ip": "192.168.1.10"
+ },
+ "hmi": "hmi.py",
+ "hmi_server": {
+  "login": false,
+  "rest": true
+ },
+ "io": {
+  "M.CTRL_H": "Control Word High Byte",
+  "M.CTRL_L": "Control Word Low Byte",
+  "M.STAT_H": "Status Word High Byte",
+  "M.STAT_L": "Status Word Low Byte",
+  "M.RX01": "RxCHAR01",
+  "M.RX02": "RxCHAR02",
+  "M.RX03": "RxCHAR03",
+  "M.RX04": "RxCHAR04",
+  "M.RX05": "RxCHAR05",
+  "M.RX06": "RxCHAR06",
+  "M.RX07": "RxCHAR07",
+  "M.RX08": "RxCHAR08",
+  "M.RX09": "RxCHAR09",
+  "M.RX10": "RxCHAR10",
+  "M.RX11": "RxCHAR11",
+  "M.RX12": "RxCHAR12",
+  "M.RX13": "RxCHAR13",
+  "M.RX14": "RxCHAR14",
+  "M.RX15": "RxCHAR15",
+  "M.RX16": "RxCHAR16",
+  "M.RX17": "RxCHAR17",
+  "M.RX18": "RxCHAR18",
+  "M.TX01": "TxCHAR01",
+  "M.TX02": "TxCHAR02",
+  "M.TX03": "TxCHAR03",
+  "M.TX04": "TxCHAR04",
+  "M.TX05": "TxCHAR05",
+  "M.TX06": "TxCHAR06",
+  "M.TX07": "TxCHAR07",
+  "M.TX08": "TxCHAR08",
+  "M.TX09": "TxCHAR09",
+  "M.TX10": "TxCHAR10",
+  "M.TX11": "TxCHAR11",
+  "M.TX12": "TxCHAR12",
+  "M.PN_IN": "DI4096",
+  "M.PN_OUT": "DQ4096",
+  "M.B_AR_VALID": "plc-b/PN_AR_VALID",
+  "M.B_NO_DIAG": "plc-b/PN_NO_DIAG",
+  "M.B_APPL_RUN": "plc-b/PN_APPL_RUN",
+  "M.X_AR_VALID": "xc216/PN_AR_VALID",
+  "M.X_NO_DIAG": "xc216/PN_NO_DIAG",
+  "M.X_APPL_RUN": "xc216/PN_APPL_RUN",
+  "M.PI_AR_VALID": "pnpi/PN_AR_VALID",
+  "M.PI_NO_DIAG": "pnpi/PN_NO_DIAG",
+  "M.PI_IN": "pnpi/Input 8 bits",
+  "M.PI_OUT": "pnpi/Output 8 bits",
+  "M.PI_EF_IN": "pnpi/Input float to controller (output from controller multiplied by gain)",
+  "M.PI_EI_IN": "pnpi/Input int to controller (output from controller multiplied by gain)",
+  "M.PI_EF_OUT": "pnpi/Output float from controller",
+  "M.PI_EI_OUT": "pnpi/Output int from controller"
+ },
+ "datalogger": [
+  {
+   "name": "Speed",
+   "sampling_ms": 1000,
+   "variables": [
+    "M.P1_SP_RPM",
+    "M.P1_ACT_RPM"
+   ]
+  },
+  {
+   "name": "Room",
+   "sampling_ms": 1000,
+   "variables": [
+    "M.TR_TEMP",
+    "M.TR_TEMP_MAX"
+   ]
+  }
+ ]
+}
