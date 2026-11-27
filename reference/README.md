@@ -5,4 +5,5 @@ Nothing in this folder is generated, and nothing here is Phoenix Contact's data.
 - `modbus-rtu.md`, `modbus-tcp.md`, `opcua.md`, `profinet.md`, `mqtt-subscribe.md`: field buses and links.
 - `hmi-trends.md`: trend charts over DataLogger sessions. `hmi-design.md`: how to make pages that look good.
 - `sequence-st.md`: step sequences in Structured Text, and why not SFC.
+- `virtual-control.md`: the controller as a container (VPLCNEXT CONTROL): host, licence server, Engineer.
 - `clickhouse.md`: values into ClickHouse over HTTP, read back, Grafana, other ways.

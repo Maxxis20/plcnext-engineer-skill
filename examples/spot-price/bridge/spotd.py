@@ -198,6 +198,9 @@ def registers(o_now, o_today, o_tomo):
            16: NOVAL if o_now["age_s"] is None else min(32767, o_now["age_s"] // 60)}
     reg[17] = o_now["known"]
     reg[18] = len(o_now["_up15"])
+    for a0, vals in ((19, o_now["_up"][:24]), (21, o_now["_up15"][:24])):   # range of the next 24 slots, for bar scaling
+        reg[a0] = p(min(vals)) if vals else NOVAL
+        reg[a0 + 1] = p(max(vals)) if vals else NOVAL
     for i in range(96):
         reg[700 + i] = p(o_now["_up15"][i]) if i < len(o_now["_up15"]) else NOVAL
     for nn in range(1, 13):

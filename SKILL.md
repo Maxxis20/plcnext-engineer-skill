@@ -229,6 +229,13 @@ and `io` links one WORD port per register (`"M.VALUE_HI": "VALUE_HI_input"`) and
 "STATE"`, UDINT). Reading function 3 / 4 only. Floats: two registers into `FB_IEEE`. Example:
 `examples/modbus-tcp-read`. At most 32 registers per server (example at the limit: `examples/spot-price/modbus`).
 
+### Virtual controller (VPLCNEXT CONTROL)
+
+The controller as a container on a Linux host. Read `reference/virtual-control.md` first: host and install, the
+licence server (must be physical hardware) and activation by files, the base project from Engineer's "Virtual
+Control" templates, and the operator page service that is off by default (page 503, no REST) until switched on.
+After that the same `program.json` and `pxe.sh` steps as for a device.
+
 ### OPC UA between controllers
 
 Every controller runs an OPC UA server (port 4840); the firmware also has a configured OPC UA client that copies

@@ -119,6 +119,8 @@ Addresses are zero-based.
 | 16 | age of the source data, minutes |
 | 17 | known: number of upcoming hours with a price, counted from the running hour (1..48) |
 | 18 | known15: number of upcoming quarters with a price, counted from the running quarter (1..96) |
+| 19, 20 | lowest and highest price of the upcoming 24 hours (500..523), known ones only; `-32768` if none |
+| 21, 22 | lowest and highest price of the upcoming 24 quarters (700..723), known ones only; `-32768` if none |
 | 100..123 | today, hours 0..23 |
 | 130..153 | rank of today's hours 0..23 |
 | 200..223 | tomorrow, hours 0..23 |
