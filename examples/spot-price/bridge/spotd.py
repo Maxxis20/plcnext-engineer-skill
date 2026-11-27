@@ -33,7 +33,9 @@ from zoneinfo import ZoneInfo
 
 UTC = dt.timezone.utc
 NOVAL = -32768
-MAX_AGE = 6 * 3600
+MAX_AGE = 30 * 3600                 # the source is asked once a day: valid as long as the last answer is younger
+PUBLISH_TZ = ZoneInfo("Europe/Helsinki")
+PUBLISH_AT = (14, 15)               # tomorrow's prices are asked for from this time on (Finnish time)
 UA = "spotd/1.0"
 
 
@@ -80,6 +82,7 @@ class Area:
         self.q = {}                 # epoch -> price
         self.fetched = 0.0          # time of the last good answer (bridge clock)
         self.next_try = 0.0
+        self.fetch_day = None       # Finnish date of the last fetch made after the publishing time
         self.source = ""
         self.max_age = MAX_AGE
         self.lock = threading.Lock()
@@ -171,6 +174,12 @@ class Area:
             blk.append(sums.index(min(sums)) if sums else -1)
         for nn, b in enumerate(blk, 1):
             o_now["blk%d" % nn] = b
+        up15 = []                       # upcoming quarters from the running one
+        for x in (tq[qi:] + (mq if tomo_ok else []))[:96]:
+            if x is None:
+                break
+            up15.append(x)
+        o_now["_up15"] = [r(x) for x in up15]
         o_now["_up"] = [r(x) for x in up]
         return o_now, o_today, o_tomo
 
@@ -188,6 +197,9 @@ def registers(o_now, o_today, o_tomo):
            14: o_now["cheap3_in"], 15: o_now["tomorrow_ok"],
            16: NOVAL if o_now["age_s"] is None else min(32767, o_now["age_s"] // 60)}
     reg[17] = o_now["known"]
+    reg[18] = len(o_now["_up15"])
+    for i in range(96):
+        reg[700 + i] = p(o_now["_up15"][i]) if i < len(o_now["_up15"]) else NOVAL
     for nn in range(1, 13):
         reg[599 + nn] = NOVAL if o_now["blk%d" % nn] < 0 else o_now["blk%d" % nn]
     for i in range(48):
@@ -202,7 +214,7 @@ def registers(o_now, o_today, o_tomo):
     return reg
 
 
-def points(o_now, o_today, o_tomo, o_up):
+def points(o_now, o_today, o_tomo, o_up, up15):
     """Everything as one list of {"id", "v"}: for clients that write each item to the point named by id.
     No value = 0 (the valid, tomorrow_ok and known items say what counts)."""
     z = lambda x: 0 if x is None else x
@@ -212,6 +224,23 @@ def points(o_now, o_today, o_tomo, o_up):
     out += [{"id": "spot.r%d" % i, "v": o_today["rank"][i]} for i in range(24)]
     out += [{"id": "spot.t%d" % i, "v": z(o_tomo["h"][i]) if o_tomo["ok"] else 0} for i in range(24)]
     out += [{"id": "spot.u%d" % i, "v": o_up["h"][i] if i < o_up["known"] else 0} for i in range(48)]
+    out.append({"id": "spot.known15", "v": len(up15)})
+    out += [{"id": "spot.q%d" % i, "v": up15[i] if i < len(up15) else 0} for i in range(96)]
+    return out
+
+
+def flat(o_now, up, res, area):
+    """One flat object for programs that pick a number by its key but cannot walk a list. res 60: slots are
+    hours, res 15: quarters. p0 = the running slot, then the upcoming ones as far as known."""
+    q = res == 15
+    now = o_now["now15"] if q else o_now["now"]
+    out = {"valid": o_now["valid"], "beat": o_now["beat"], "res": res,
+           "slot": o_now["quarter"] if q else o_now["hour"], "hour": o_now["hour"],
+           "now": now, "now_total": None if now is None else round(area.total(now), 3),
+           "rank": o_now["rank"], "tomorrow_ok": o_now["tomorrow_ok"], "age_s": o_now["age_s"], "known": len(up)}
+    out = {k: v for k, v in out.items() if v is not None}
+    for i, x in enumerate(up):
+        out["p%d" % i] = x
     return out
 
 
@@ -402,10 +431,28 @@ class Bridge:
 
     # -- real sources
     def fetch_due(self):
-        """at most one request per 65 s in total (the source allows one per minute per address)"""
+        """When to ask the source. Tomorrow's prices are published in the early afternoon, so: once at start,
+        then every day at 14:15 Finnish time, and again every 10 minutes after that until tomorrow's prices are
+        there. Besides that only when today's prices are missing (every 5 minutes). At most one request per
+        65 s in total: the source allows one per minute per address."""
         t = time.time()
-        due = [a for a in self.areas if a.next_try <= t]
-        if not due or t - getattr(self, "last_req", 0) < 65:
+        if t - getattr(self, "last_req", 0) < 65:
+            return
+        fi = dt.datetime.now(PUBLISH_TZ)
+        after = (fi.hour, fi.minute) >= PUBLISH_AT
+        now = self.now()
+        due = []
+        for a in self.areas:
+            if a.next_try > t:
+                continue
+            _, today, tomo = a.snapshot(now, self.beat)
+            if not a.fetched or not today["ok"]:
+                due.append(a)                                   # start, or today missing
+            elif after and not tomo["ok"]:
+                due.append(a)                                   # after 14:15 until tomorrow is there
+            elif after and a.fetch_day != fi.date():
+                due.append(a)                                   # the daily fetch (tomorrow already known: once)
+        if not due:
             return
         a = min(due, key=lambda x: x.next_try)
         self.last_req = t
@@ -424,10 +471,10 @@ class Bridge:
                 a.q.update(q)
                 a.q = {k: v for k, v in a.q.items() if k > cut}
                 a.fetched, a.source = t, src
-            _, _, tomo = a.snapshot(self.now(), self.beat)
-            local = self.now()
-            # tomorrow missing in the afternoon: ask every 10 min, else once an hour
-            a.next_try = t + (600 if (not tomo["ok"] and local.hour >= 13) else 3600)
+            _, today, tomo = a.snapshot(self.now(), self.beat)
+            if after:
+                a.fetch_day = fi.date()
+            a.next_try = t + (300 if not today["ok"] else 600)
             log(a.name, "fetched", len(q), "quarters from", src, "tomorrow", "yes" if tomo["ok"] else "no")
         except Exception as e:
             a.next_try = t + 300
@@ -456,6 +503,7 @@ class Bridge:
                 o_now, o_today, o_tomo = a.snapshot(now, self.beat)
                 regs = registers(o_now, o_today, o_tomo)
                 o_up = {"area": a.name, "hour": o_now["hour"], "known": o_now["known"], "h": o_now.pop("_up")}
+                up15 = o_now.pop("_up15")
                 if once:
                     print(json.dumps(o_now))
                     print(json.dumps({k: o_today[k] for k in ("date", "ok", "h", "rank")}))
@@ -465,7 +513,9 @@ class Bridge:
                         mb.units[unit] = regs
                 if mqtt:
                     mqtt.publish("%s/%s/now" % (prefix, a.name), o_now)
-                    mqtt.publish("%s/%s/points" % (prefix, a.name), points(o_now, o_today, o_tomo, o_up))
+                    mqtt.publish("%s/%s/points" % (prefix, a.name), points(o_now, o_today, o_tomo, o_up, up15))
+                    mqtt.publish("%s/%s/flat60" % (prefix, a.name), flat(o_now, o_up["h"], 60, a))
+                    mqtt.publish("%s/%s/flat15" % (prefix, a.name), flat(o_now, up15, 15, a))
                     for key, o in (("today", o_today), ("tomorrow", o_tomo), ("upcoming", o_up)):
                         s = json.dumps(o)
                         if sent.get((a.name, key)) != s or self.beat % 360 == 0:

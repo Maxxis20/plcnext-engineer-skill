@@ -23,7 +23,9 @@ Modbus unit id. The bridge itself is `spotd.py` in this folder; this file is the
   On the day the clocks change the missing hour repeats its neighbour, the double hour is averaged.
 - `rank`: 1 = cheapest hour of the local day, 24 = dearest. "Run in the N cheapest hours" = `rank <= N`.
 - Tomorrow's prices arrive in the afternoon (about 14:00 Finnish time). Before that `tomorrow_ok` = 0.
-- `valid` = 1 only when today's prices are present and the source answered within the last 6 hours. `beat` counts up
+- The bridge asks the source once at start, then every day at 14:15 Finnish time, and every 10 minutes after
+  that until tomorrow's prices are there (and every 5 minutes while today's prices are missing).
+- `valid` = 1 only when today's prices are present and the source answered within the last 30 hours. `beat` counts up
   by one every 10 s. **A controller must treat `valid` = 0 or a `beat` that stands still for 60 s as "no price"
   and fall back to normal operation** (no blocking, no boosting).
 
@@ -76,6 +78,21 @@ value pointer and write each item to the point named by its id. Ids carry no are
   max, next1..3, cheap3_in, tomorrow_ok, known, age_s, blk1..blk12).
 - `spot.h0`..`spot.h23` today's hours, `spot.r0`..`spot.r23` their rank, `spot.t0`..`spot.t23` tomorrow's hours
   (0 while `tomorrow_ok` = 0), `spot.u0`..`spot.u47` the upcoming hours (`u0` = the running hour; 0 beyond `known`).
+- `spot.q0`..`spot.q95` the running quarter and the upcoming ones (0 beyond `spot.known15`, their number).
+
+`spot/<AREA>/flat60` and `spot/<AREA>/flat15`, every 10 s with `now`: one flat object each, for programs that
+pick a number by its key but cannot walk a list (a PLC program with a simple JSON search). The same keys in both;
+the topic chooses hourly or 15 minute prices. A "slot" is an hour (`flat60`) or a quarter (`flat15`).
+
+```json
+{"valid":1,"beat":1234,"res":15,"slot":58,"hour":14,"now":11.9,"now_total":14.93,"rank":17,
+ "tomorrow_ok":1,"age_s":812,"known":96,"p0":11.9,"p1":12.4, ...}
+```
+
+- `res` 60 or 15; `slot` = the running slot of the local day (0..23 or 0..95); `now` = its price.
+- `p0`..: the running slot and the upcoming ones as far as known, at most 48 hours (`flat60`) or 96 quarters =
+  24 hours (`flat15`); `known` = their number; keys beyond it are left out.
+- `rank` is the hourly rank of the day in both. About 0.9 KB (`flat60`) and 1.5 KB (`flat15`).
 
 ## Modbus TCP (port 1502)
 
@@ -101,12 +118,14 @@ Addresses are zero-based.
 | 15 | tomorrow_ok (0 / 1) |
 | 16 | age of the source data, minutes |
 | 17 | known: number of upcoming hours with a price, counted from the running hour (1..48) |
+| 18 | known15: number of upcoming quarters with a price, counted from the running quarter (1..96) |
 | 100..123 | today, hours 0..23 |
 | 130..153 | rank of today's hours 0..23 |
 | 200..223 | tomorrow, hours 0..23 |
 | 300..395 | today, quarters 0..95 |
 | 400..495 | tomorrow, quarters 0..95 |
 | 500..547 | upcoming hours: 500 = the running hour, 501 = the next, ... ; `-32768` beyond `known` |
+| 700..795 | upcoming quarters: 700 = the running quarter, 701 = the next, ... ; `-32768` beyond `known15` |
 | 600..611 | hours until the start of the cheapest block of N consecutive hours among the upcoming ones, N = 1..12 (600 = N 1); 0 = it starts in the running hour; `-32768` = fewer than N hours known |
 
 ## Tests the bridge supports

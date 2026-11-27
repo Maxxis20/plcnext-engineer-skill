@@ -106,7 +106,7 @@ through the controller's second Ethernet interface, routed by the controller's L
 ## Limits
 
 **32 registers per server** (seen: 65 registers gave "Modbus error by the register 'T14'. The Modbus server has too
-many function codes (32)" when the project was opened). Example at the limit: `examples/spot-price`.
+many function codes (32)" when the project was opened). Example at the limit: `examples/spot-price/modbus`.
 
 Not tried:
 

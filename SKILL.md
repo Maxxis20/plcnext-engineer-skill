@@ -227,8 +227,7 @@ The firmware has its own Modbus TCP client: configured in the project, nothing t
 switch on the controller, the status items. Then `program.json` gets `modbus_tcp` (server address, unit, registers)
 and `io` links one WORD port per register (`"M.VALUE_HI": "VALUE_HI_input"`) and the status items (`"M.MB_STATE":
 "STATE"`, UDINT). Reading function 3 / 4 only. Floats: two registers into `FB_IEEE`. Example:
-`examples/modbus-tcp-read`. At most 32 registers per server. A complete use (electricity spot prices from a
-bridge on another machine, cheapest consecutive hours, bar graph of the upcoming hours): `examples/spot-price`.
+`examples/modbus-tcp-read`. At most 32 registers per server (example at the limit: `examples/spot-price/modbus`).
 
 ### OPC UA between controllers
 
@@ -283,7 +282,9 @@ device, in real time beside the other Ethernet traffic. Read `reference/profinet
 
 The firmware's MQTT client only publishes. To receive, `FB_MQTT_SUB` (a small MQTT 3.1.1 client on the socket
 blocks of the "PLCnext Controller" library) and `FB_JSON_NUM` (one number from a JSON payload) go into the
-program: copy them from `examples/mqtt-subscribe/src/`. Plain TCP, no login, one topic, QoS 0, reconnects by
+program: copy them from `examples/mqtt-subscribe/src/`. A complete use (electricity spot prices from a bridge on
+another machine: area, hourly or 15 minute prices, cheapest consecutive hours, bar graph):
+`examples/spot-price`. Plain TCP, no login, one topic, QoS 0, reconnects by
 itself. Read `reference/mqtt-subscribe.md` first: pins, states, error codes, the characters a topic may hold
 (no `#`, no space), a ChirpStack uplink as example.
 
