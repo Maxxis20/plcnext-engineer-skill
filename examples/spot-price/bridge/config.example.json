@@ -1,0 +1,10 @@
+{
+  "tz": "Europe/Helsinki",
+  "source": "spot-hinta",
+  "areas": [
+    {"area": "FI", "vat_pct": 25.5, "add": 0.0},
+    {"area": "SE3"}
+  ],
+  "mqtt": {"host": "broker.example", "port": 1883, "user": "spot", "password_env": "SPOT_MQTT_PASSWORD", "prefix": "spot"},
+  "modbus": {"port": 1502}
+}

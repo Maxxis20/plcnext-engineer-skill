@@ -103,7 +103,12 @@ octet string item (not used; one register per row is simpler in the program).
 server is in another subnet than the project's IP range. Harmless: the read works (**proven**, server reached
 through the controller's second Ethernet interface, routed by the controller's Linux).
 
-## Limits, not tried
+## Limits
+
+**32 registers per server** (seen: 65 registers gave "Modbus error by the register 'T14'. The Modbus server has too
+many function codes (32)" when the project was opened). Example at the limit: `examples/spot-price`.
+
+Not tried:
 
 Writing registers (FC6 / 16 offered by the tool, not built by the generator); coils and discrete inputs (FC1 /
 2); more than one server in a project; several registers in one row (quantity > 1); swap bytes; the controller

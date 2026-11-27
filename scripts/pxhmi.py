@@ -124,9 +124,12 @@ class Page:
             '</Segments></SubPaths>\n</HmiObject>'
             % (hid(oid), color, width, FONT % (18, 400, "#FF3E3D40"), x1, y1, x1, y1, SCOPES, x2 - x1, y2 - y1))
 
-    def button(self, oid, x, y, w, h, text, write=None, step=None, size=14, page=None):
+    def button(self, oid, x, y, w, h, text, write=None, step=None, size=14, page=None, visible=None,
+               fill="#FFECEDED", line_width=1):
         """write = (variable, constant): set on click. step = (variable, amount): add on click. page = name of another
-        page of the project: show it on click (Engineer's "Load page"; pxproj puts in the page's id)."""
+        page of the project: show it on click (Engineer's "Load page"; pxproj puts in the page's id).
+        visible = expression: the button exists only while it is TRUE. fill "#00FFFFFF" with line_width 0 and text " "
+        gives an invisible click area to lay over a drawing."""
         self.texts[hid(oid) + ".Text"] = text
         act = ""
         if page:
@@ -137,15 +140,16 @@ class Page:
         if step:
             act = ('<Action xsi:type="IncrementValueAction" Gesture="Click" ID="A1" StepConstant="%g">'
                    '%s</Action>\n' % (step[1], varref("VariableInstance", step[0])))
-        attrs = ('NextId="2" LineColor="#FFCCD0D2" LineWidth="1" Text=%s %s IsTextWrapping="false" TextDirection="LeftToRight" '
+        attrs = ('NextId="2" LineColor="#FFCCD0D2" LineWidth="%g" Text=%s %s IsTextWrapping="false" TextDirection="LeftToRight" '
                  'HorizontalTextAlignment="Center" GuiStyle="Flat" TextMarginTop="0" TextMarginBottom="0" TextMarginLeft="0" '
                  'TextMarginRight="0" EndCapType="Square" IsLatching="false" IsDefault="false" ImpulseTime="0" ImagePlacement="Left" '
                  'ImageAreaWidthUnits="Percent" ImageAreaHeightUnits="Percent" Margin="0" '
                  'ImageWhenDownId="00000000-0000-0000-0000-000000000000" ImageScaling="Fill"'
-                 % (quoteattr(text), FONT % (size, 400, "#FF3E3D40")))
-        extra = ('<FillWhenDown xsi:type="SolidFill" Color="#FF8ACCD1" />\n<ImageArea><Width>50</Width><Height>50</Height></ImageArea>\n'
-                 '<CornerRadii><Width>0</Width><Height>0</Height></CornerRadii>\n')
-        self._obj("Button", oid, x, y, w, h, attrs, "#FFECEDED", act, extra, tab="true")
+                 % (line_width, quoteattr(text), FONT % (size, 400, "#FF3E3D40")))
+        extra = ('<FillWhenDown xsi:type="SolidFill" Color="%s" />\n<ImageArea><Width>50</Width><Height>50</Height></ImageArea>\n'
+                 '<CornerRadii><Width>0</Width><Height>0</Height></CornerRadii>\n'
+                 % ("#408ACCD1" if fill.startswith("#00") else "#FF8ACCD1"))
+        self._obj("Button", oid, x, y, w, h, attrs, fill, act + self._dyn(visible), extra, tab="true")
 
     def chart(self, oid, x, y, w, h, session, pens, minutes=15, sampling_ms=1000, mode="Raw", left=(0, 0), right=(0, 0),
               zoom=False, line="#FFCCD0D2"):

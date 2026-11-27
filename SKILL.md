@@ -227,7 +227,8 @@ The firmware has its own Modbus TCP client: configured in the project, nothing t
 switch on the controller, the status items. Then `program.json` gets `modbus_tcp` (server address, unit, registers)
 and `io` links one WORD port per register (`"M.VALUE_HI": "VALUE_HI_input"`) and the status items (`"M.MB_STATE":
 "STATE"`, UDINT). Reading function 3 / 4 only. Floats: two registers into `FB_IEEE`. Example:
-`examples/modbus-tcp-read`.
+`examples/modbus-tcp-read`. At most 32 registers per server. A complete use (electricity spot prices from a
+bridge on another machine, cheapest consecutive hours, bar graph of the upcoming hours): `examples/spot-price`.
 
 ### OPC UA between controllers
 

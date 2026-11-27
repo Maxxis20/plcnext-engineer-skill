@@ -1,0 +1,199 @@
+VAR
+    (* registers of the price bridge, signed, price x 100 *)
+    R_VALID : WORD { InputPort };
+    R_BEAT : WORD { InputPort };
+    R_HOUR : WORD { InputPort };
+    R_TOTAL : WORD { InputPort };
+    R_RANK : WORD { InputPort };
+    R_TOMO_OK : WORD { InputPort };
+    R_AGE : WORD { InputPort };
+    R_KNOWN : WORD { InputPort };
+    U00 : WORD { InputPort };
+    U01 : WORD { InputPort };
+    U02 : WORD { InputPort };
+    U03 : WORD { InputPort };
+    U04 : WORD { InputPort };
+    U05 : WORD { InputPort };
+    U06 : WORD { InputPort };
+    U07 : WORD { InputPort };
+    U08 : WORD { InputPort };
+    U09 : WORD { InputPort };
+    U10 : WORD { InputPort };
+    U11 : WORD { InputPort };
+    U12 : WORD { InputPort };
+    U13 : WORD { InputPort };
+    U14 : WORD { InputPort };
+    U15 : WORD { InputPort };
+    U16 : WORD { InputPort };
+    U17 : WORD { InputPort };
+    U18 : WORD { InputPort };
+    U19 : WORD { InputPort };
+    U20 : WORD { InputPort };
+    U21 : WORD { InputPort };
+    U22 : WORD { InputPort };
+    U23 : WORD { InputPort };
+    MB_STATE : UDINT { InputPort, EHMI };
+    MB_OFFLINE : UDINT { InputPort, EHMI };
+    MB_EXC : UDINT { InputPort, EHMI };
+    TS : REAL := 0.1;
+    I : INT;
+    J : INT;
+    X : REAL;
+    SUM : REAL;
+    BEST : REAL;
+    BI : INT;
+    A : ARRAY[0..23] OF INT;              (* upcoming hours, raw; 0 = the running hour *)
+    PLA : ARRAY[0..23] OF BOOL;           (* the load may run in this hour *)
+    SEC_T : REAL;
+    (* price data *)
+    VALID : BOOL { EHMI };                (* prices usable: link up, bridge says valid, beat moves *)
+    LINK : BOOL { EHMI };
+    SRC_VALID : BOOL { EHMI };
+    BEAT : INT { EHMI };
+    BEAT_OLD : INT;
+    BEAT_T : REAL { EHMI };               (* s since the beat last moved *)
+    BEAT_OK : BOOL { EHMI };
+    HOUR : INT { EHMI };
+    HOUR_OLD : INT := -1;
+    HCNT : DINT { EHMI };                 (* hours counted since start: the plan's clock *)
+    KNOWN : INT { EHMI };                 (* upcoming hours with a price, at most 24 here *)
+    PRICE : REAL { EHMI };                (* c/kWh without VAT, running hour *)
+    PRICE_TOTAL : REAL { EHMI };
+    RANK : INT { EHMI };                  (* 1 = cheapest hour of the day *)
+    P_AVG : REAL { EHMI };                (* of the upcoming hours *)
+    P_MIN : REAL { EHMI };
+    P_MAX : REAL { EHMI };
+    TOMO_OK : BOOL { EHMI };
+    AGE_MIN : INT { EHMI };
+    SCALE : REAL := 10.0 { EHMI };        (* top of the bars *)
+    (* operator *)
+    MODE : INT := 2 { EHMI };             (* 0 off, 1 on (thermostat only), 2 price control *)
+    STRAT : INT := 0 { EHMI };            (* 0 cheapest consecutive N_BLOCK hours, 1 the N_CHEAP cheapest hours of the day *)
+    N_BLOCK : INT := 5 { EHMI };
+    N_CHEAP : INT := 6 { EHMI };
+    LIM_HIGH : REAL := 20.0 { EHMI };     (* never above this price *)
+    LIM_LOW : REAL := 1.0 { EHMI };       (* always at or below this price, with the boost setpoint *)
+    SP : REAL := 60.0 { EHMI };
+    SP_BOOST : REAL := 75.0 { EHMI };
+    T_MIN : REAL := 45.0 { EHMI };        (* below this the tank heats whatever the price *)
+    REPLAN : BOOL { EHMI };               (* button: plan again now *)
+    (* plan: one block, frozen until it has run *)
+    PLAN_OK : BOOL { EHMI };
+    PS : DINT;                            (* start of the block, in HCNT hours *)
+    PN : INT { EHMI };                    (* its length *)
+    PEND : DINT;                          (* end of the known hours when the plan was made *)
+    P_BLOCK : REAL { EHMI };              (* average price of the block *)
+    START_IN : INT { EHMI };              (* hours until the block starts; 0 = it runs *)
+    START_AT : INT { EHMI };              (* hour of the day it starts *)
+    LEFT_H : INT { EHMI };                (* hours of the block left, the running one included *)
+    IN_BLOCK : BOOL { EHMI };
+    NEED : BOOL;
+    (* load *)
+    RELEASE : BOOL { EHMI };
+    REASON : INT { EHMI };                (* 0 off, 1 on by hand, 2 cheap hour, 3 very cheap: boost, 4 blocked: price above limit,
+                                             5 waiting for a cheaper hour, 6 no price data: normal operation, 7 tank cold *)
+    SP_ACT : REAL { EHMI };
+    TH : BOOL;
+    HEAT : BOOL { EHMI };
+    TANK : REAL := 55.0 { EHMI };         (* simulated *)
+    AL_NOPRICE : BOOL { EHMI };
+    AL_T : REAL;
+    SIM_FAST : BOOL { EHMI };             (* test: tank 20 x faster *)
+    SIMK : REAL;
+    PT00 : REAL { EHMI };
+    BT00 : REAL { EHMI };
+    PL00 : BOOL { EHMI };
+    HL00 : INT { EHMI };
+    PT01 : REAL { EHMI };
+    BT01 : REAL { EHMI };
+    PL01 : BOOL { EHMI };
+    HL01 : INT { EHMI };
+    PT02 : REAL { EHMI };
+    BT02 : REAL { EHMI };
+    PL02 : BOOL { EHMI };
+    HL02 : INT { EHMI };
+    PT03 : REAL { EHMI };
+    BT03 : REAL { EHMI };
+    PL03 : BOOL { EHMI };
+    HL03 : INT { EHMI };
+    PT04 : REAL { EHMI };
+    BT04 : REAL { EHMI };
+    PL04 : BOOL { EHMI };
+    HL04 : INT { EHMI };
+    PT05 : REAL { EHMI };
+    BT05 : REAL { EHMI };
+    PL05 : BOOL { EHMI };
+    HL05 : INT { EHMI };
+    PT06 : REAL { EHMI };
+    BT06 : REAL { EHMI };
+    PL06 : BOOL { EHMI };
+    HL06 : INT { EHMI };
+    PT07 : REAL { EHMI };
+    BT07 : REAL { EHMI };
+    PL07 : BOOL { EHMI };
+    HL07 : INT { EHMI };
+    PT08 : REAL { EHMI };
+    BT08 : REAL { EHMI };
+    PL08 : BOOL { EHMI };
+    HL08 : INT { EHMI };
+    PT09 : REAL { EHMI };
+    BT09 : REAL { EHMI };
+    PL09 : BOOL { EHMI };
+    HL09 : INT { EHMI };
+    PT10 : REAL { EHMI };
+    BT10 : REAL { EHMI };
+    PL10 : BOOL { EHMI };
+    HL10 : INT { EHMI };
+    PT11 : REAL { EHMI };
+    BT11 : REAL { EHMI };
+    PL11 : BOOL { EHMI };
+    HL11 : INT { EHMI };
+    PT12 : REAL { EHMI };
+    BT12 : REAL { EHMI };
+    PL12 : BOOL { EHMI };
+    HL12 : INT { EHMI };
+    PT13 : REAL { EHMI };
+    BT13 : REAL { EHMI };
+    PL13 : BOOL { EHMI };
+    HL13 : INT { EHMI };
+    PT14 : REAL { EHMI };
+    BT14 : REAL { EHMI };
+    PL14 : BOOL { EHMI };
+    HL14 : INT { EHMI };
+    PT15 : REAL { EHMI };
+    BT15 : REAL { EHMI };
+    PL15 : BOOL { EHMI };
+    HL15 : INT { EHMI };
+    PT16 : REAL { EHMI };
+    BT16 : REAL { EHMI };
+    PL16 : BOOL { EHMI };
+    HL16 : INT { EHMI };
+    PT17 : REAL { EHMI };
+    BT17 : REAL { EHMI };
+    PL17 : BOOL { EHMI };
+    HL17 : INT { EHMI };
+    PT18 : REAL { EHMI };
+    BT18 : REAL { EHMI };
+    PL18 : BOOL { EHMI };
+    HL18 : INT { EHMI };
+    PT19 : REAL { EHMI };
+    BT19 : REAL { EHMI };
+    PL19 : BOOL { EHMI };
+    HL19 : INT { EHMI };
+    PT20 : REAL { EHMI };
+    BT20 : REAL { EHMI };
+    PL20 : BOOL { EHMI };
+    HL20 : INT { EHMI };
+    PT21 : REAL { EHMI };
+    BT21 : REAL { EHMI };
+    PL21 : BOOL { EHMI };
+    HL21 : INT { EHMI };
+    PT22 : REAL { EHMI };
+    BT22 : REAL { EHMI };
+    PL22 : BOOL { EHMI };
+    HL22 : INT { EHMI };
+    PT23 : REAL { EHMI };
+    BT23 : REAL { EHMI };
+    PL23 : BOOL { EHMI };
+    HL23 : INT { EHMI };
+END_VAR
